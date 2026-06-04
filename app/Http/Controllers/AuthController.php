@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    // Web login method (unchanged)
+    // Web login method - Admin only
     public function login(Request $request)
     {
         $request->validate([
@@ -19,6 +19,14 @@ class AuthController extends Controller
         ]);
 
         if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
+            // Check if user is admin
+            if (Auth::user()->role !== 'admin') {
+                Auth::logout();
+                return back()->withErrors([
+                    'email' => 'Access denied. Admin privileges required.',
+                ]);
+            }
+            
             $request->session()->regenerate();
             return redirect()->intended('/dashboard')->with('success', 'Login successful');
         }
@@ -73,6 +81,12 @@ class AuthController extends Controller
                 'message' => 'Login successful',
                 'access_token' => $token,
                 'token_type' => 'Bearer',
+                'user' => [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                ],
             ]);
         }
     
@@ -115,6 +129,7 @@ class AuthController extends Controller
             'name' => $request->name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'user', // Default role for API registration
         ]);
 
         // Log the user in and create a token
@@ -132,7 +147,7 @@ class AuthController extends Controller
     public function getAllUsers()
 {
     // Select only the columns you want
-    $users = User::select('id', 'name', 'email', 'email_verified_at', 'password', 'remember_token', 'created_at', 'updated_at')->get();
+    $users = User::select('id', 'name', 'email', 'role', 'email_verified_at', 'created_at', 'updated_at')->get();
 
     return response()->json($users);
 }
@@ -143,12 +158,14 @@ public function addUser(Request $request)
         'name' => 'required|string|max:255',
         'email' => 'required|email|unique:users',
         'password' => 'required|min:6',
+        'role' => 'sometimes|in:admin,user',
     ]);
 
     $user = \App\Models\User::create([
         'name' => $validated['name'],
         'email' => $validated['email'],
         'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+        'role' => $validated['role'] ?? 'user',
     ]);
 
     return response()->json([
@@ -190,11 +207,13 @@ public function updateUser(Request $request, $id)
     $request->validate([
         'name' => 'sometimes|required|string|max:255',
         'email' => 'sometimes|required|email|unique:users,email,' . $id,
-        'password' => 'sometimes|required|min:6'
+        'password' => 'sometimes|required|min:6',
+        'role' => 'sometimes|in:admin,user',
     ]);
 
     $user->name = $request->name ?? $user->name;
     $user->email = $request->email ?? $user->email;
+    $user->role = $request->role ?? $user->role;
 
     if ($request->filled('password')) {
         $user->password = \Illuminate\Support\Facades\Hash::make($request->password);

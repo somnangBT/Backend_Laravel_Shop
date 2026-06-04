@@ -32,8 +32,8 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
 });
 
-// Authenticated Routes
-Route::middleware('auth')->group(function () {
+// Authenticated Routes (Admin Only)
+Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
@@ -77,4 +77,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/home', function () {
         return redirect()->route('products.index');
     })->name('home');
+});
+use App\Http\Controllers\ClientController;
+
+// ...existing code...
+
+Route::middleware('auth')->group(function () {
+    // ...other routes...
+
+    Route::resource('clients', ClientController::class);
+
+    // ...other routes...
 });

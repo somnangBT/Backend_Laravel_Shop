@@ -301,6 +301,57 @@
             </div>
         </div>
     </div>
+
+    <!-- Customers and Their Orders -->
+    <div class="bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl shadow-xl border border-gray-700/50 overflow-hidden mb-8">
+        <div class="p-6 border-b border-gray-700/50">
+            <h2 class="text-xl font-semibold text-gray-200 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 2a8 8 0 100 16 8 8 0 000-16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                Customers & Their Orders
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead>
+                    <tr class="bg-gray-900/70 text-gray-400 text-sm">
+                        <th class="py-3 px-4 text-left font-medium">Customer Name</th>
+                        <th class="py-3 px-4 text-left font-medium">Email</th>
+                        <th class="py-3 px-4 text-left font-medium">Ordered Products</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-800">
+                    @forelse ($customers as $customer)
+                        <tr>
+                            <td class="py-3 px-4 text-gray-200 font-medium">{{ $customer->name }}</td>
+                            <td class="py-3 px-4 text-gray-300">{{ $customer->email }}</td>
+                            <td class="py-3 px-4">
+                                @if($customer->orders->count())
+                                    <ul class="list-disc ml-4">
+                                        @foreach($customer->orders as $order)
+                                            @foreach($order->items as $item)
+                                                <li>
+                                                    {{ $item->product ? $item->product->pro_name : 'Product deleted' }}
+                                                    <span class="text-xs text-gray-400">x{{ $item->quantity }}</span>
+                                                </li>
+                                            @endforeach
+                                        @endforeach
+                                    </ul>
+                                @else
+                                    <span class="text-gray-500">No orders yet</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="3" class="py-6 text-center text-gray-500">No customers found.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <script>

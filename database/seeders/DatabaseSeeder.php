@@ -13,10 +13,10 @@ class DatabaseSeeder extends Seeder
     {
         // Insert user: ThyMuoyhak
         DB::table('users')->insert([
-            'name' => 'HakSimpleDev',
-            'email' => 'haksimpledev@gmail.com',
+            'name' => 'somnang',
+            'email' => 'somnang@gmail.com',
             'email_verified_at' => now(),
-            'password' => Hash::make('11111111'),
+            'password' => Hash::make('somnang123'),
             'remember_token' => Str::random(10),
             'created_at' => now(),
             'updated_at' => now(),
@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
 
         // Password Reset Token
         DB::table('password_reset_tokens')->insert([
-            'email' => 'haksimpledev@gmail.com',
+            'email' => 'somnang@gmail.com',
             'token' => Str::random(60),
             'created_at' => now(),
         ]);
@@ -38,5 +38,7 @@ class DatabaseSeeder extends Seeder
             'payload' => 'sample_payload_data',
             'last_activity' => now()->timestamp,
         ]);
+        // Seed payment methods
+        $this->call(PaymentMethodSeeder::class);
     }
 }

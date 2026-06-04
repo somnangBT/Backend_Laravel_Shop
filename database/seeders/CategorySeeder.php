@@ -14,3 +14,4 @@ class CategorySeeder extends Seeder
         Category::create(['cat_name' => 'Books']);
     }
 }
+

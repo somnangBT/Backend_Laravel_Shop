@@ -10,10 +10,10 @@ use Illuminate\Support\Facades\Validator;
 class CategoryController extends Controller
 {
     public function index()
-    {
-        $categories = Category::paginate(10);
-        return view('category.index', compact('categories'));
-    }
+{
+    $categories = Category::withCount('products')->paginate(10);
+    return view('category.index', compact('categories'));
+}
 
     public function create()
     {
@@ -119,6 +119,29 @@ class CategoryController extends Controller
             'status' => 'success',
             'data' => $categories,
         ], 200);
+    }
+
+    public function storeApi(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'cat_name' => 'required|string|max:255',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $category = Category::create($validator->validated());
+
+        return response()->json([
+            'status' => 'success',
+            'data' => $category,
+            'message' => 'Category created successfully.',
+        ], 201);
     }
 
     public function showApi($id)

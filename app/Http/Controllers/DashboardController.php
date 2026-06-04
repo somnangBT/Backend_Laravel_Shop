@@ -18,6 +18,11 @@ class DashboardController extends Controller
         $productsInStock = Product::where('qty', '>', 0)->count();
         $lowStockProducts = Product::where('qty', '<=', 10)->count();
 
-        return view('dashboard', compact('products', 'totalProducts', 'productsInStock', 'lowStockProducts'));
+        // Fetch all customers and their orders with products
+        $customers = \App\Models\User::where('role', 'user')
+            ->with(['orders.items.product'])
+            ->get();
+
+        return view('dashboard', compact('products', 'totalProducts', 'productsInStock', 'lowStockProducts', 'customers'));
     }
 }

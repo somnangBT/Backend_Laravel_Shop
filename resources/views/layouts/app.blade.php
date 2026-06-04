@@ -12,7 +12,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -165,10 +166,10 @@
                 <!-- Management Section -->
                 <div class="px-3 mt-6 space-y-1">
                     <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Management</div>
-                    <a href="#" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('clients') ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-border/50' }} transition-colors">
-                        <i class="fas fa-handshake w-5 h-5"></i>
-                        <span class="ml-3 sidebar-text">Clients</span>
-                    </a>
+                   <a href="{{ route('clients.index') }}" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('clients') ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-border/50' }} transition-colors">
+    <i class="fas fa-handshake w-5 h-5"></i>
+    <span class="ml-3 sidebar-text">Clients</span>
+</a>
                     <a href="#" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('tasks') ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-border/50' }} transition-colors">
                         <i class="fas fa-tasks w-5 h-5"></i>
                         <span class="ml-3 sidebar-text">Tasks</span>
@@ -177,8 +178,7 @@
                         <i class="fas fa-calendar-alt w-5 h-5"></i>
                         <span class="ml-3 sidebar-text">Calendar</span>
                     </a>
-                </div>
-                
+                </div>               
                 <!-- Settings Section -->
                 <div class="px-3 mt-6 space-y-1">
                     <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Settings</div>
@@ -250,7 +250,7 @@
             <!-- Footer -->
             <footer class="border-t border-gray-200 dark:border-gray-800 py-4 px-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 <p>
-                    Developed by <a href="https://web.facebook.com/urfavhak" class="font-medium text-primary hover:underline" target="_blank" rel="noopener noreferrer">Thy Muoyhak</a>
+                    Developed by <a href="https://web.telegram.org/k/" class="font-medium text-primary hover:underline" target="_blank" rel="noopener noreferrer">Youn Somnang</a>
                 </p>
                 <p class="mt-1">
                     &copy; 2025 DeliciousEats. All rights reserved.
