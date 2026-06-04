@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
     {
         // Insert user: ThyMuoyhak
         DB::table('users')->insert([
-            'name' => 'somnang',
-            'email' => 'somnang@gmail.com',
+            'name' => 'HakSimpleDev',
+            'email' => 'haksimpledev@gmail.com',
             'email_verified_at' => now(),
             'password' => Hash::make('somnang123'),
             'remember_token' => Str::random(10),
@@ -24,7 +24,7 @@ class DatabaseSeeder extends Seeder
 
         // Password Reset Token
         DB::table('password_reset_tokens')->insert([
-            'email' => 'somnang@gmail.com',
+            'email' => 'haksimpledev@gmail.com',
             'token' => Str::random(60),
             'created_at' => now(),
         ]);

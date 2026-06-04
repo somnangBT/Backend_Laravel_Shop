@@ -13,8 +13,13 @@ class UserSeeder extends Seeder
     {
         // Insert user: ThyMuoyhak
         DB::table('users')->insert([
+<<<<<<< HEAD
             'name' => 'somnang',
             'email' => 'somnang@gmail.com',
+=======
+            'name' => 'admin',
+            'email' => 'admin@gmail.com',
+>>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
             'email_verified_at' => now(),
             'password' => Hash::make('somnang123'),
             'remember_token' => Str::random(10),
