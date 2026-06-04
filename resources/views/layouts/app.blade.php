@@ -175,7 +175,6 @@
     </a>
 </div>
                 
-<<<<<<< HEAD
                 <!-- Management Section -->
                 <div class="px-3 mt-6 space-y-1">
                     <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Management</div>
@@ -192,10 +191,6 @@
                         <span class="ml-3 sidebar-text">Calendar</span>
                     </a>
                 </div>               
-=======
-               
-                
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
                 <!-- Settings Section -->
                 <div class="px-3 mt-6 space-y-1">
                     <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Settings</div>
@@ -267,11 +262,7 @@
             <!-- Footer -->
             <footer class="border-t border-gray-200 dark:border-gray-800 py-4 px-6 text-center text-sm text-gray-500 dark:text-gray-400">
                 <p>
-<<<<<<< HEAD
                     Developed by <a href="https://web.telegram.org/k/" class="font-medium text-primary hover:underline" target="_blank" rel="noopener noreferrer">Youn Somnang</a>
-=======
-                    Developed by <a href="https://web.facebook.com/urfavhak" class="font-medium text-primary hover:underline" target="_blank" rel="noopener noreferrer">XXXXXX</a>
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
                 </p>
                 <p class="mt-1">
                     &copy; 2025 DeliciousEats. All rights reserved.

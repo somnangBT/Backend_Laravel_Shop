@@ -17,25 +17,21 @@
                 <div class="relative">
                     <div class="absolute inset-0 -m-3 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full blur-md opacity-70"></div>
                     <div class="relative w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-4 border-gray-800 shadow-xl">
-<<<<<<< HEAD
+
                         <img src="https://th.bing.com/th/id/OIP.JUD2JoTEGvEAA_3EfBHWTgHaI9?rs=1&pid=ImgDetMain" alt="Developer Image" class="w-full h-full object-cover">
-=======
+
                         <img 
                             src="" 
                             alt="" 
                             class="w-full h-full object-cover"
                         >
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
+
                     </div>
                 </div>
                 
                 <!-- Profile Info -->
                 <div class="text-center md:text-left">
-<<<<<<< HEAD
                     <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">Yorn somnang</h1>
-=======
-                    <h1 class="text-4xl md:text-5xl font-bold text-white mb-2">xxxxxx</h1>
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
                     <div class="inline-flex items-center px-3 py-1 rounded-full bg-cyan-600/20 text-cyan-400 text-sm font-medium mb-4">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
@@ -43,11 +39,7 @@
                         Web Developer, Designer, and Programmer
                     </div>
                     <p class="text-lg text-gray-300 max-w-2xl">
-<<<<<<< HEAD
-                        Hello! I'm Yorn somnang, a passionate web developer with a strong background in creating modern websites and applications. I specialize in frontend and backend development, ensuring seamless user experiences.
-=======
                         Hello! xxxxxx, a passionate web developer with a strong background in creating modern websites and applications. I specialize in frontend and backend development, ensuring seamless user experiences.
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
                     </p>
                     
                     <!-- Social Links -->
@@ -373,11 +365,7 @@
                                 <div>
                                     <h3 class="text-white font-medium">Email</h3>
                                     <a href="mailto:thymuoyhak.biu@gmail.com" class="text-cyan-400 hover:text-cyan-300 transition-colors">
-<<<<<<< HEAD
                                         yornsomnang.biu@gmail.com
-=======
-                                        xxxxxx@gmail.com
->>>>>>> 03f53ac22f0f9f31d93e44a9965a36e6b4e1674f
                                     </a>
                                 </div>
                             </div>
