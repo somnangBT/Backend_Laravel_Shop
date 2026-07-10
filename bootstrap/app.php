@@ -12,8 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        // ១. បន្ថែម Trust Proxies សម្រាប់ Render (ប្ដូរឱ្យស្គាល់គ្រប់ Proxy ទាំងអស់)
-        $middleware->trustProxies(at: '*');
+        // កែសម្រួលត្រង់នេះ៖ ប្រើទម្រង់ arrays សម្រាប់ស្គាល់គ្រប់ Proxies ទាំងអស់
+        $middleware->trustProxies(headers: 0b11111, at: '*'); 
 
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
