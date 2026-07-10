@@ -12,11 +12,13 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Insert user: ThyMuoyhak
+       // Insert user: ThyMuoyhak
         DB::table('users')->insert([
-            'name' => 'HakSimpleDev',
-            'email' => 'haksimpledev@gmail.com',
+            'name' => 'Somnang',
+            'email' => 'somnang@gmail.com',
             'email_verified_at' => now(),
-            'password' => Hash::make('somnang123'),
+            'password' => Hash::make('123'),
+            'role' => 'admin', // ⚠️ ត្រូវតែថែមជួរនេះដាច់ខាត ដើម្បីឱ្យ AuthController ព្រមឱ្យចូល
             'remember_token' => Str::random(10),
             'created_at' => now(),
             'updated_at' => now(),
