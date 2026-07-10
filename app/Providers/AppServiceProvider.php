@@ -4,7 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
-use Illuminate\Support\Facades\URL; // <-- បន្ថែមជួរដេកនេះមួយ
+use Illuminate\Support\Facades\URL;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -19,9 +19,9 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot()
+    public function boot(): void
     {
-        // បង្ខំឱ្យប្រើ HTTPS ជានិច្ចនៅពេលនៅលើ Render (Production)
+        // បង្ខំឱ្យប្រើ HTTPS ជានិច្ចនៅពេលរត់លើ Render (Production)
         if (config('app.env') === 'production' || env('APP_ENV') === 'production') {
             URL::forceScheme('https');
         }
