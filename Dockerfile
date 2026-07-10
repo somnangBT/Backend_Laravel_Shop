@@ -29,4 +29,4 @@ RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
 EXPOSE 80
 
 
-CMD sh -c "php artisan config:clear && php-fpm & nginx -g 'daemon off;'"
+CMD sh -c "php artisan config:clear && php artisan route:clear && php artisan cache:clear && php-fpm & nginx -g 'daemon off;'"
