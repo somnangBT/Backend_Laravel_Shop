@@ -20,9 +20,8 @@ COPY . .
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader
 
-# Setup Nginx configuration
-RUN mkdir -p /run/nginx
-COPY .render/nginx.conf /etc/nginx/nginx.conf
+# Setup Nginx configuration directly (កែប្រែត្រង់ចំណុចនេះ)
+RUN mkdir -p /run/nginx && echo 'server { listen 80; root /var/www/public; index index.php index.html; charset utf-8; location / { try_files $uri $uri/ /index.php?$query_string; } location ~ \.php$ { fastcgi_pass 127.0.0.1:9000; fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; include fastcgi_params; } }' > /etc/nginx/http.d/default.conf
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache
