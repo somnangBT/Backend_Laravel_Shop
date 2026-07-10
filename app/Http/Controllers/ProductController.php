@@ -21,8 +21,11 @@ class ProductController extends Controller
 
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
-            $query->where('pro_name', 'like', "%$search%")
+            // ចងវាជា Group Closure ដើម្បីការពារសុវត្ថិភាពការ Query
+            $query->where(function($q) use ($search) {
+                $q->where('pro_name', 'like', "%$search%")
                   ->orWhere('pro_code', 'like', "%$search%");
+            });
         }
 
         $products = $query->paginate(10)->appends(['search' => $request->search]);
@@ -41,7 +44,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code'],
             'pro_name' => ['required', 'string', 'max:255'],
-            'category_id' => ['nullable', 'exists:categories,cat_id'],
+            'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required ដើម្បីការពារ Error null
             'qty' => ['required', 'integer', 'min:0'],
             'price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
@@ -50,10 +53,10 @@ class ProductController extends Controller
             'image_url' => ['nullable', 'url'],
         ]);
 
-        // Calculate discounted price
+        // គណនាតម្លៃដែលបានបញ្ចុះរួច (Discounted Price)
         $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
 
-        // Handle image: URL takes precedence over file upload
+        // គ្រប់គ្រងការរក្សាទុករូបភាព
         if ($request->filled('image_url')) {
             $validated['image'] = $request->image_url;
         } elseif ($request->hasFile('image')) {
@@ -83,7 +86,7 @@ class ProductController extends Controller
         $validated = $request->validate([
             'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code,' . $product->pro_id . ',pro_id'],
             'pro_name' => ['required', 'string', 'max:255'],
-            'category_id' => ['nullable', 'exists:categories,cat_id'],
+            'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required
             'qty' => ['required', 'integer', 'min:0'],
             'price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
@@ -92,24 +95,20 @@ class ProductController extends Controller
             'image_url' => ['nullable', 'url'],
         ]);
 
-        // Calculate discounted price
         $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
 
-        // Handle image: URL takes precedence over file upload
         if ($request->filled('image_url')) {
-            // Delete old image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
             $validated['image'] = $request->image_url;
         } elseif ($request->hasFile('image')) {
-            // Delete old image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
             $validated['image'] = $request->file('image')->store('products', 'public');
         } else {
-            $validated['image'] = $product->image; // Retain existing image
+            $validated['image'] = $product->image; 
         }
 
         $product->update($validated);
@@ -120,7 +119,6 @@ class ProductController extends Controller
     public function destroy(Product $product)
     {
         try {
-            // Delete image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
@@ -133,15 +131,18 @@ class ProductController extends Controller
         }
     }
 
-    // API Methods
+    // ==================== API Methods ====================
+    
     public function indexApi(Request $request)
     {
         $query = Product::with('category');
 
         if ($request->has('search') && $request->search !== '') {
             $search = $request->search;
-            $query->where('pro_name', 'like', "%$search%")
+            $query->where(function($q) use ($search) {
+                $q->where('pro_name', 'like', "%$search%")
                   ->orWhere('pro_code', 'like', "%$search%");
+            });
         }
 
         $products = $query->get()->map(function ($product) {
@@ -177,7 +178,7 @@ class ProductController extends Controller
         $validator = Validator::make($request->all(), [
             'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code,' . $id . ',pro_id'],
             'pro_name' => ['required', 'string', 'max:255'],
-            'category_id' => ['nullable', 'exists:categories,cat_id'],
+            'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required
             'qty' => ['required', 'integer', 'min:0'],
             'price' => ['required', 'numeric', 'min:0'],
             'description' => ['nullable', 'string'],
@@ -195,25 +196,20 @@ class ProductController extends Controller
         }
 
         $validated = $validator->validated();
-
-        // Calculate discounted price
         $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
 
-        // Handle image: URL takes precedence over file upload
         if ($request->filled('image_url')) {
-            // Delete old image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
             $validated['image'] = $request->image_url;
         } elseif ($request->hasFile('image')) {
-            // Delete old image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
             $validated['image'] = $request->file('image')->store('products', 'public');
         } else {
-            $validated['image'] = $product->image; // Retain existing image
+            $validated['image'] = $product->image; 
         }
 
         $product->update($validated);
@@ -234,7 +230,6 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         try {
-            // Delete image if it exists and is a stored file (not a URL)
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }

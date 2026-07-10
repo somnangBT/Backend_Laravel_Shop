@@ -17,13 +17,18 @@ class Product extends Model
         'category_id',
         'qty',
         'price',
+        'discounted_price', // បន្ថែមចំណុចនេះ ដើម្បីឱ្យអាចរក្សាទុកតម្លៃបញ្ចុះតម្លៃបាន
         'description',
         'discount',
         'image',
     ];
 
-    public function getDiscountedPriceAttribute()
+    // កែសម្រួល Accessor នេះបន្តិច (ករណីចង់ហៅទាញមកប្រើបន្ថែមនៅកន្លែងផ្សេង)
+    public function getDiscountedPriceAttribute($value)
     {
+        if ($value !== null) {
+            return $value;
+        }
         return $this->price * (1 - ($this->discount ?? 0) / 100);
     }
 

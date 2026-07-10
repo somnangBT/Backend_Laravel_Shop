@@ -13,9 +13,11 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\PurchaseController;
 use App\Http\Controllers\OrderController;
+use App\Http\Controllers\ClientController;
 
-
+// ==========================================
 // Public Routes (No Authentication Required)
+// ==========================================
 Route::middleware('guest')->group(function () {
     Route::get('/', function () {
         return view('auth.login');
@@ -34,7 +36,9 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register'])->name('register.submit');
 });
 
+// ==========================================
 // Authenticated Routes (Admin Only)
+// ==========================================
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -42,27 +46,28 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Slide Hero Routes
     Route::resource('slide-heroes', SlideHeroController::class);
 
-    // Cart/Order Routes
+    // Cart/Order Routes (បងអាចប្ដូរ PurchaseController ទៅ OrderController ទាំងអស់ក៏បានបើចង់)
     Route::get('/cart', [PurchaseController::class, 'index'])->name('cart.index');
-    Route::get('/cart/{order}', [OrderController::class, 'show'])->name('cart.show');
     Route::get('/cart/create', [OrderController::class, 'create'])->name('cart.create');
     Route::post('/cart', [OrderController::class, 'store'])->name('cart.store');
+    Route::get('/cart/{order}', [OrderController::class, 'show'])->name('cart.show');
     Route::get('/cart/{order}/edit', [OrderController::class, 'edit'])->name('cart.edit');
     Route::put('/cart/{order}', [OrderController::class, 'update'])->name('cart.update');
     Route::delete('/cart/{order}', [OrderController::class, 'destroy'])->name('cart.destroy');
 
-    // Category Routes
-    Route::resource('categories', CategoryController::class);
-    Route::get('/categories/{category}/delete', [CategoryController::class, 'delete'])->name('categories.delete');
+    // Category Routes (ដាក់ Custom Route នៅពីលើ Resource ដើម្បីកុំឲ្យជាន់គ្នា)
     Route::get('/categories/search', [CategoryController::class, 'search'])->name('categories.search');
     Route::get('/categories/trashed', [CategoryController::class, 'trashed'])->name('categories.trashed');
+    Route::get('/categories/{category}/delete', [CategoryController::class, 'delete'])->name('categories.delete');
     Route::put('/categories/{category}/restore', [CategoryController::class, 'restore'])->name('categories.restore');
+    Route::resource('categories', CategoryController::class);
 
     // Other Resource Routes
     Route::resource('products', ProductController::class);
     Route::resource('employees', EmployeeController::class);
-    Route::resource('projects', ProjectController::class)->except(['show']);
+    Route::resource('clients', ClientController::class); // រៀបចំបញ្ចូលមកក្នុង Admin Group ឲ្យមានរបៀបរៀបរយ
     Route::resource('reports', ReportController::class);
+    Route::resource('projects', ProjectController::class)->except(['show']);
 
     Route::get('/profile', function () {
         return view('develop.index');
@@ -81,15 +86,4 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/home', function () {
         return redirect()->route('products.index');
     })->name('home');
-});
-use App\Http\Controllers\ClientController;
-
-// ...existing code...
-
-Route::middleware('auth')->group(function () {
-    // ...other routes...
-
-    Route::resource('clients', ClientController::class);
-
-    // ...other routes...
 });
