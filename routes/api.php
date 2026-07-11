@@ -12,7 +12,10 @@ use App\Http\Controllers\SlideHeroController;
 // =============================================
 // PUBLIC ROUTES (No Authentication Required)
 // =============================================
-Route::get('/products/search', [ProductController::class, 'searchApi'])->name('api.products.search');
+// ប្រើ middleware 'api' ឱ្យច្បាស់លាស់
+Route::middleware(['api'])->group(function () {
+    Route::get('/products/search', [ProductController::class, 'searchApi']);
+});
 // Auth Routes
 Route::post('/login', [AuthController::class, 'apiLogin']);
 Route::post('/register', [AuthController::class, 'apiRegister']);

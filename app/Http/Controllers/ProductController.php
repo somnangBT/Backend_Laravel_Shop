@@ -40,21 +40,14 @@ class ProductController extends Controller
     }
     public function searchApi(Request $request)
 {
+    // សរសេរបែបនេះដើម្បីធានាថាវាចេញជា JSON
     $keyword = $request->query('q');
-    
-    // បន្ថែមការការពារ (Validation) ដើម្បីសុវត្ថិភាព
-    if (empty($keyword)) {
-        return response()->json(['status' => 'error', 'message' => 'Keyword is required'], 400);
-    }
-
-    $products = Product::where('name', 'LIKE', "%{$keyword}%")
-                       ->orWhere('description', 'LIKE', "%{$keyword}%")
-                       ->get();
+    $products = Product::where('name', 'LIKE', "%{$keyword}%")->get();
 
     return response()->json([
         'status' => 'success',
         'data' => $products
-    ], 200);
+    ]);
 }
     
     public function store(Request $request)
