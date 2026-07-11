@@ -22,8 +22,12 @@ Route::get('/categories', [CategoryController::class, 'indexApi'])->name('api.ca
 Route::get('/categories/{id}', [CategoryController::class, 'showApi'])->name('api.categories.show');
 
 // Product API Routes (Public - Read Only)
+Route::get('/products/search', [ProductController::class, 'searchApi'])->name('api.products.search');
 Route::get('/products', [ProductController::class, 'indexApi'])->name('api.products.index');
 Route::get('/products/{id}', [ProductController::class, 'showApi'])->name('api.products.show');
+// Product Search API Route
+
+
 
 Route::get('/slide-heroes', [SlideHeroController::class, 'indexApi']);
 // =============================================
