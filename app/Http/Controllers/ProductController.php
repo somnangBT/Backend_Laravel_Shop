@@ -38,19 +38,24 @@ class ProductController extends Controller
         $categories = Category::all();
         return view('products.create', compact('categories'));
     }
-    public function searchApi(Request $request) {
-        $keyword = $request->query('q');
-        
-        // ពិនិត្យមើលថាតើ keyword មានតម្លៃអត់
-        $products = Product::where('name', 'LIKE', "%{$keyword}%")
-                           ->orWhere('description', 'LIKE', "%{$keyword}%")
-                           ->get();
-
-        return response()->json([
-            'status' => 'success',
-            'data' => $products
-        ], 200);
+    public function searchApi(Request $request)
+{
+    $keyword = $request->query('q');
+    
+    // បន្ថែមការការពារ (Validation) ដើម្បីសុវត្ថិភាព
+    if (empty($keyword)) {
+        return response()->json(['status' => 'error', 'message' => 'Keyword is required'], 400);
     }
+
+    $products = Product::where('name', 'LIKE', "%{$keyword}%")
+                       ->orWhere('description', 'LIKE', "%{$keyword}%")
+                       ->get();
+
+    return response()->json([
+        'status' => 'success',
+        'data' => $products
+    ], 200);
+}
     
     public function store(Request $request)
     {

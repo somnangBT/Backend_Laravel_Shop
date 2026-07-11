@@ -16,9 +16,9 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!Auth::check()) {
-            return redirect()->route('login')->with('error', 'Please login first.');
-        }
+        if ($request->is('api/products/search')) {
+        return $next($request);
+    }
 
         if (Auth::user()->role !== 'admin') {
             // For API requests, return JSON
