@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 
@@ -83,11 +85,12 @@ class ProductController extends Controller
         $validated['discount'] = !empty($validated['discount']) ? (float) $validated['discount'] : 0;
         $validated['discounted_price'] = $validated['price'] * (1 - $validated['discount'] / 100);
 
-        // គ្រប់គ្រងការរក្សាទុករូបភាព
+        // គ្រប់គ្រងការរក្សាទុករូបភាព (Support Cloud Upload ស្វ័យប្រវត្តិ)
         if ($request->filled('image_url')) {
             $validated['image'] = $request->image_url;
         } elseif ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $cloudUrl = $this->uploadToCloud($request->file('image'));
+            $validated['image'] = $cloudUrl ?: $request->file('image')->store('products', 'public');
         } else {
             $validated['image'] = null;
         }
@@ -136,7 +139,8 @@ class ProductController extends Controller
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $cloudUrl = $this->uploadToCloud($request->file('image'));
+            $validated['image'] = $cloudUrl ?: $request->file('image')->store('products', 'public');
         } else {
             $validated['image'] = $product->image; 
         }
@@ -238,7 +242,8 @@ class ProductController extends Controller
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
                 Storage::disk('public')->delete($product->image);
             }
-            $validated['image'] = $request->file('image')->store('products', 'public');
+            $cloudUrl = $this->uploadToCloud($request->file('image'));
+            $validated['image'] = $cloudUrl ?: $request->file('image')->store('products', 'public');
         } else {
             $validated['image'] = $product->image; 
         }
@@ -275,5 +280,34 @@ class ProductController extends Controller
                 'message' => 'Cannot delete product due to existing relationships or other issues.',
             ], 400);
         }
+    }
+
+    /**
+     * Upload an image to Free Cloud Storage (ImgBB) if configured.
+     * Returns permanent public image URL, or null if failed / not configured.
+     */
+    protected function uploadToCloud($imageFile)
+    {
+        $apiKey = env('IMGBB_API_KEY');
+        if (!$apiKey) {
+            return null;
+        }
+
+        try {
+            $response = Http::asForm()->timeout(30)->post('https://api.imgbb.com/1/upload', [
+                'key' => $apiKey,
+                'image' => base64_encode(file_get_contents($imageFile->getRealPath())),
+            ]);
+
+            if ($response->successful() && isset($response['data']['url'])) {
+                return $response['data']['url'];
+            }
+
+            Log::warning('ImgBB upload response error: ' . json_encode($response->json()));
+        } catch (\Exception $e) {
+            Log::error('ImgBB cloud upload exception: ' . $e->getMessage());
+        }
+
+        return null;
     }
 }
