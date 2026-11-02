@@ -314,15 +314,29 @@ class OrderController extends Controller
                         $productList .= ($index + 1) . ". {$name} (x{$item['quantity']}) - $" . number_format($itemTotal, 2) . "\n";
                     }
                     
-                    // អ្នកគ្រូកែត្រង់នេះ៖ យកឈ្មោះពី React មកបង្ហាញ បើអត់មានទើបដាក់ Guest
                     $customerName = $request->customer_name ?? ($user ? $user->name : 'អតិថិជនទូទៅ (Guest)');
-                    
-                    $message = "🛒 មានការបញ្ជាទិញថ្មី (Order #" . $order->id . ")!\n\n"
+                    $paymentMethodName = ($request->payment_method === 'khqr' || $request->payment_method === 'bakong_aba') 
+                        ? '💳 ស្កេន KHQR (Bakong / ABA)' 
+                        : '💵 សាច់ប្រាក់សុទ្ធ (Cash on Delivery)';
+                    $phone = $order->phone ?? $request->phone ?? 'មិនទាន់បញ្ជាក់';
+                    $address = $order->shipping_address ?? $request->address ?? 'ភ្នំពេញ';
+                    $totalUSD = number_format($request->total ?? $request->subtotal, 2);
+                    $totalKHR = number_format(($request->total ?? $request->subtotal) * 4100);
+
+                    $message = "🛒 មានការបញ្ជាទិញថ្មី (Order #{$order->id})!\n\n"
                              . "👤 អតិថិជន: {$customerName}\n"
+                             . "📞 ទូរស័ព្ទ: {$phone}\n"
+                             . "📍 ទីតាំងដឹក: {$address}\n"
+                             . "💳 វិធីទូទាត់: {$paymentMethodName}\n\n"
                              . "📦 ទំនិញដែលបានទិញ:\n"
                              . $productList
-                             . "\n💰 សរុបទឹកប្រាក់: $" . number_format($request->total ?? $request->subtotal, 2) . "\n\n"
-                             . "សូមពិនិត្យមើលក្នុងប្រព័ន្ធដើម្បីរៀបចំឥវ៉ាន់!";
+                             . "\n💰 សរុបទឹកប្រាក់: \${$totalUSD} = ({$totalKHR} ៛)\n";
+
+                    if ($request->filled('payment_proof')) {
+                        $message .= "🧾 វិក្កយបត្របង់ប្រាក់: " . $request->input('payment_proof') . "\n";
+                    }
+
+                    $message .= "\nសូមពិនិត្យមើលក្នុងប្រព័ន្ធដើម្បីរៀបចំឥវ៉ាន់!";
 
                     $response = Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
                         'chat_id' => $chatId,
