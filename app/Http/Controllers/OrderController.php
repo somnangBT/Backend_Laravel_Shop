@@ -214,6 +214,35 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        // Normalize fields sent from React frontend
+        if ($request->has('items') && is_array($request->items)) {
+            $items = $request->items;
+            foreach ($items as &$it) {
+                if (!isset($it['product_id']) && isset($it['pro_id'])) {
+                    $it['product_id'] = $it['pro_id'];
+                }
+                if (!isset($it['product_id']) && isset($it['id'])) {
+                    $it['product_id'] = $it['id'];
+                }
+            }
+            $request->merge(['items' => $items]);
+        }
+
+        if (!$request->filled('subtotal')) {
+            $subtotal = $request->input('total') ?? $request->input('total_amount') ?? 0;
+            $request->merge(['subtotal' => $subtotal]);
+        }
+        if (!$request->filled('total')) {
+            $total = $request->input('total_amount') ?? $request->input('subtotal') ?? 0;
+            $request->merge(['total' => $total]);
+        }
+        if (!$request->filled('shipping_address') && $request->filled('address')) {
+            $request->merge(['shipping_address' => $request->address]);
+        }
+        if (!$request->filled('customer_name') && $request->filled('name')) {
+            $request->merge(['customer_name' => $request->name]);
+        }
+
         // ១. ធ្វើ Validation ទិន្នន័យដែលផ្ញើពី React
         $request->validate([
             'items' => 'required|array',
