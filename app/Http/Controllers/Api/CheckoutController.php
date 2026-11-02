@@ -12,12 +12,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;  // បានបន្ថែម Log
+use Illuminate\Support\Facades\Http; // បានបន្ថែម Http សម្រាប់ Telegram
 
 class CheckoutController extends Controller
 {
-    /**
-     * Get checkout summary (requires authentication)
-     */
     public function summary(Request $request)
     {
         $userId = $request->user()->id;
@@ -55,9 +54,8 @@ class CheckoutController extends Controller
             ];
         }
 
-        // Calculate totals
-        $tax = round($subtotal * 0.10, 2); // 10% tax
-        $shipping = $subtotal >= 50 ? 0 : 5.00; // Free shipping over $50
+        $tax = round($subtotal * 0.10, 2);
+        $shipping = $subtotal >= 50 ? 0 : 5.00;
         $total = round($subtotal + $tax + $shipping, 2);
 
         return response()->json([
@@ -73,9 +71,6 @@ class CheckoutController extends Controller
         ]);
     }
 
-    /**
-     * Process checkout/payment (requires authentication)
-     */
     public function process(Request $request)
     {
         $user = $request->user();
@@ -96,7 +91,6 @@ class CheckoutController extends Controller
             ], 422);
         }
 
-        // Get cart items
         $cartItems = Cart::with(['product'])
             ->where('user_id', $user->id)
             ->get();
@@ -108,7 +102,6 @@ class CheckoutController extends Controller
             ], 400);
         }
 
-        // Verify stock and calculate totals
         $items = [];
         $subtotal = 0;
 
@@ -141,7 +134,6 @@ class CheckoutController extends Controller
             ];
         }
 
-        // Calculate totals
         $tax = round($subtotal * 0.10, 2);
         $shipping = $subtotal >= 50 ? 0 : 5.00;
         $discount = $this->calculatePromoDiscount($request->promo_code, $subtotal);
@@ -149,7 +141,6 @@ class CheckoutController extends Controller
 
         try {
             $order = DB::transaction(function () use ($user, $request, $items, $subtotal, $tax, $shipping, $discount, $total) {
-                // Create order
                 $order = Order::create([
                     'user_id' => $user->id,
                     'email' => $user->email,
@@ -166,7 +157,6 @@ class CheckoutController extends Controller
                     'phone' => $request->phone,
                 ]);
 
-                // Create order items and update stock
                 foreach ($items as $item) {
                     OrderItem::create([
                         'order_id' => $order->id,
@@ -176,24 +166,61 @@ class CheckoutController extends Controller
                         'discount' => $item['discount'],
                     ]);
 
-                    // Decrease product stock
                     Product::where('pro_id', $item['product_id'])
                         ->decrement('qty', $item['quantity']);
                 }
 
-                // Clear user's cart
                 Cart::where('user_id', $user->id)->delete();
 
                 return $order;
             });
 
-            // Send confirmation email
             try {
                 Mail::to($user->email)->queue(new OrderConfirmation($order));
             } catch (\Exception $e) {
-                // Log email error but don't fail the order
-                \Log::error('Failed to send order confirmation email: ' . $e->getMessage());
+                Log::error('Failed to send order confirmation email: ' . $e->getMessage());
             }
+
+            // ==========================================
+            // ៤. ផ្ញើសារទៅកាន់ Telegram ក្រោយពេល Checkout
+            // ==========================================
+            try {
+                $token = env('TELEGRAM_BOT_TOKEN');
+                $chatId = env('TELEGRAM_CHAT_ID');
+
+                if (empty($token) || empty($chatId)) {
+                    Log::error("Telegram Skipped: Token ឬ Chat ID ទទេស្អាត! Token={$token}, ChatID={$chatId}");
+                } elseif ($token && $chatId) {
+                    $productList = "";
+                    foreach ($cartItems as $index => $cartItem) {
+                        $product = $cartItem->product;
+                        $itemTotal = $product->discounted_price * $cartItem->quantity;
+                        $productList .= ($index + 1) . ". {$product->pro_name} (x{$cartItem->quantity}) - $" . number_format($itemTotal, 2) . "\n";
+                    }
+                    
+                    $customerName = $user->name ?? 'Guest';
+                    $message = "🛒 មានការបញ្ជាទិញថ្មី (Order #" . $order->id . ")!\n\n"
+                             . "👤 អតិថិជន: {$customerName} ({$request->phone})\n"
+                             . "📍 ទីតាំង: {$request->shipping_address}\n"
+                             . "💳 ការទូទាត់: {$request->payment_method}\n"
+                             . "📦 ទំនិញដែលបានទិញ:\n"
+                             . $productList
+                             . "\n💰 សរុបទឹកប្រាក់: $" . number_format($total, 2) . "\n\n"
+                             . "សូមពិនិត្យមើលក្នុងប្រព័ន្ធដើម្បីរៀបចំឥវ៉ាន់!";
+
+                    $response = Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
+                        'chat_id' => $chatId,
+                        'text' => $message,
+                    ]);
+
+                    if (!$response->successful()) {
+                        Log::error('Telegram API Failed: ' . $response->body());
+                    }
+                }
+            } catch (\Exception $e) {
+                Log::error('Telegram error: ' . $e->getMessage());
+            }
+            // ==========================================
 
             return response()->json([
                 'status' => 'success',
@@ -216,9 +243,6 @@ class CheckoutController extends Controller
         }
     }
 
-    /**
-     * Get user's order history
-     */
     public function orderHistory(Request $request)
     {
         $user = $request->user();
@@ -234,9 +258,6 @@ class CheckoutController extends Controller
         ]);
     }
 
-    /**
-     * Get single order details
-     */
     public function orderDetail(Request $request, $id)
     {
         $user = $request->user();
@@ -259,16 +280,12 @@ class CheckoutController extends Controller
         ]);
     }
 
-    /**
-     * Calculate promo code discount
-     */
     private function calculatePromoDiscount($promoCode, $subtotal)
     {
         if (!$promoCode) {
             return 0;
         }
 
-        // Example promo codes - you can extend this with a database table
         $promoCodes = [
             'SAVE10' => ['type' => 'percentage', 'value' => 10],
             'SAVE20' => ['type' => 'percentage', 'value' => 20],
@@ -288,6 +305,6 @@ class CheckoutController extends Controller
             return round($subtotal * ($promo['value'] / 100), 2);
         }
         
-        return min($promo['value'], $subtotal); // Don't let discount exceed subtotal
+        return min($promo['value'], $subtotal);
     }
 }

@@ -65,4 +65,8 @@ class Order extends Model
     {
         return $query->where('user_id', $userId);
     }
+    public function orderItems()
+{
+    return $this->hasMany(OrderItem::class, 'order_id');
+}
 }

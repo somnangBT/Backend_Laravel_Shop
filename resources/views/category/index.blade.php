@@ -89,18 +89,38 @@
                                     </span>
                                 </td>
                                 <td class="py-3 px-6">
+                                    @php
+                                        $catData = [
+                                            'cat_id' => $category->cat_id,
+                                            'cat_name' => $category->cat_name,
+                                            'products_count' => $category->products_count ?? 0,
+                                            'update_url' => route('categories.update', $category->cat_id),
+                                            'created_at' => $category->created_at ? $category->created_at->format('M d, Y h:i A') : 'N/A',
+                                            'updated_at' => $category->updated_at ? $category->updated_at->format('M d, Y h:i A') : 'N/A',
+                                        ];
+                                    @endphp
                                     <div class="flex justify-center gap-2">
-                                        <a href="{{ route('categories.show', $category->cat_id) }}" class="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors" title="View">
+                                        <button 
+                                            type="button" 
+                                            onclick='openCategoryDetailModal({!! json_encode($catData) !!})' 
+                                            class="p-2 bg-gray-700/60 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-all hover:scale-105" 
+                                            title="View Details"
+                                        >
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
-                                        </a>
-                                        <a href="{{ route('categories.edit', $category->cat_id) }}" class="p-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 hover:text-cyan-300 rounded-lg transition-colors" title="Edit">
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            onclick='openCategoryEditModal({!! json_encode($catData) !!})' 
+                                            class="p-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 hover:text-cyan-300 rounded-lg transition-all hover:scale-105" 
+                                            title="Edit Category"
+                                        >
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
-                                        </a>
+                                        </button>
                                         <form action="{{ route('categories.destroy', $category->cat_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this category?');" class="inline">
                                             @csrf
                                             @method('DELETE')
@@ -238,4 +258,7 @@
         transition-duration: 300ms;
     }
 </style>
+
+@include('category.partials.modals')
+
 @endsection

@@ -29,26 +29,41 @@ class ProductController extends Controller
         }
 
         $products = $query->paginate(10)->appends(['search' => $request->search]);
+        $categories = \Illuminate\Support\Facades\Cache::remember('all_categories', 3600, function () {
+            return Category::all();
+        });
 
-        return view('products.index', compact('products'));
+        return view('products.index', compact('products', 'categories'));
     }
 
     public function create()
     {
-        $categories = Category::all();
+        $categories = \Illuminate\Support\Facades\Cache::remember('all_categories', 3600, function () {
+            return Category::all();
+        });
         return view('products.create', compact('categories'));
     }
     public function searchApi(Request $request)
-{
-    // សរសេរបែបនេះដើម្បីធានាថាវាចេញជា JSON
-    $keyword = $request->query('q');
-    $products = Product::where('name', 'LIKE', "%{$keyword}%")->get();
+    {
+        $keyword = $request->query('q');
+        $products = Product::with('category')
+            ->where(function($q) use ($keyword) {
+                $q->where('pro_name', 'LIKE', "%{$keyword}%")
+                  ->orWhere('pro_code', 'LIKE', "%{$keyword}%");
+            })
+            ->get()
+            ->map(function ($product) {
+                if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
+                    $product->image = Storage::url($product->image);
+                }
+                return $product;
+            });
 
-    return response()->json([
-        'status' => 'success',
-        'data' => $products
-    ]);
-}
+        return response()->json([
+            'status' => 'success',
+            'data' => $products
+        ]);
+    }
     
     public function store(Request $request)
     {
@@ -65,7 +80,8 @@ class ProductController extends Controller
         ]);
 
         // គណនាតម្លៃដែលបានបញ្ចុះរួច (Discounted Price)
-        $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
+        $validated['discount'] = !empty($validated['discount']) ? (float) $validated['discount'] : 0;
+        $validated['discounted_price'] = $validated['price'] * (1 - $validated['discount'] / 100);
 
         // គ្រប់គ្រងការរក្សាទុករូបភាព
         if ($request->filled('image_url')) {
@@ -88,7 +104,9 @@ class ProductController extends Controller
 
     public function edit(Product $product)
     {
-        $categories = Category::all();
+        $categories = \Illuminate\Support\Facades\Cache::remember('all_categories', 3600, function () {
+            return Category::all();
+        });
         return view('products.edit', compact('product', 'categories'));
     }
 
@@ -106,7 +124,8 @@ class ProductController extends Controller
             'image_url' => ['nullable', 'url'],
         ]);
 
-        $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
+        $validated['discount'] = !empty($validated['discount']) ? (float) $validated['discount'] : 0;
+        $validated['discounted_price'] = $validated['price'] * (1 - $validated['discount'] / 100);
 
         if ($request->filled('image_url')) {
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
@@ -207,7 +226,8 @@ class ProductController extends Controller
         }
 
         $validated = $validator->validated();
-        $validated['discounted_price'] = $validated['price'] * (1 - ($validated['discount'] ?? 0) / 100);
+        $validated['discount'] = !empty($validated['discount']) ? (float) $validated['discount'] : 0;
+        $validated['discounted_price'] = $validated['price'] * (1 - $validated['discount'] / 100);
 
         if ($request->filled('image_url')) {
             if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {

@@ -96,6 +96,9 @@ return [
             'search_path' => 'public',
             // កែសម្រួលត្រង់ជួរ sslmode នេះ ទៅជា 'require' វិញ
             'sslmode' => 'require', 
+            'options' => [
+                PDO::ATTR_PERSISTENT => true,
+            ], 
         ],
 
         'sqlsrv' => [

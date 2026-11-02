@@ -2,12 +2,12 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory; // Add this line
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Setting extends Model
 {
-    use HasFactory; // Use the trait
+    use HasFactory;
 
     /**
      * The attributes that are mass assignable.
@@ -17,6 +17,9 @@ class Setting extends Model
     protected $fillable = [
         'email_notifications',
         'sms_notifications',
+        'push_notifications',
         'dark_mode',
+        'compact_mode',
+        'color_theme',
     ];
 }

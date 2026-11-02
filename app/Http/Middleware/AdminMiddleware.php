@@ -20,18 +20,19 @@ class AdminMiddleware
         return $next($request);
     }
 
-        if (Auth::user()->role !== 'admin') {
+        $allowedStaff = ['admin', 'manager', 'cashier', 'kitchen'];
+        if (!Auth::check() || !in_array(Auth::user()->role, $allowedStaff)) {
             // For API requests, return JSON
             if ($request->expectsJson()) {
                 return response()->json([
                     'status' => 'error',
-                    'message' => 'Access denied. Admin privileges required.'
+                    'message' => 'Access denied. Staff privileges required.'
                 ], 403);
             }
             
             // For web requests, redirect with error
             Auth::logout();
-            return redirect()->route('login')->with('error', 'Access denied. Admin privileges required.');
+            return redirect()->route('login')->with('error', 'Access denied. Staff privileges required.');
         }
 
         return $next($request);

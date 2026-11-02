@@ -46,6 +46,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Slide Hero Routes
     Route::resource('slide-heroes', SlideHeroController::class);
 
+    // Orders & Kitchen Display Routes
+    Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/kitchen', [OrderController::class, 'kitchen'])->name('orders.kitchen');
+    Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+
     // Cart/Order Routes (បងអាចប្ដូរ PurchaseController ទៅ OrderController ទាំងអស់ក៏បានបើចង់)
     Route::get('/cart', [PurchaseController::class, 'index'])->name('cart.index');
     Route::get('/cart/create', [OrderController::class, 'create'])->name('cart.create');
@@ -66,6 +71,19 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::resource('products', ProductController::class);
     Route::resource('employees', EmployeeController::class);
     Route::resource('clients', ClientController::class); // រៀបចំបញ្ចូលមកក្នុង Admin Group ឲ្យមានរបៀបរៀបរយ
+    // Customer Report Routes (Daily, Monthly, Yearly & Excel Export)
+    Route::get('/reports/customers', [ReportController::class, 'customerReport'])->name('reports.customers');
+    Route::get('/reports/customers/export', [ReportController::class, 'exportCustomerReport'])->name('reports.customers.export');
+    
+    // Sales & Revenue Report Routes (Daily, Monthly, Yearly & Excel Export)
+    Route::get('/reports/sales', [ReportController::class, 'salesReport'])->name('reports.sales');
+    Route::get('/reports/sales/export', [ReportController::class, 'exportSalesReport'])->name('reports.sales.export');
+
+    // User & Role Management Routes (Admin Only)
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/users', [AuthController::class, 'userIndex'])->name('users.index');
+        Route::put('/users/{user}/role', [AuthController::class, 'updateRole'])->name('users.update-role');
+    });
     Route::resource('reports', ReportController::class);
     Route::resource('projects', ProjectController::class)->except(['show']);
 
@@ -81,6 +99,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Settings Routes
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::put('/settings', [SettingController::class, 'update'])->name('settings.update');
+    Route::post('/settings/toggle-theme', [SettingController::class, 'toggleTheme'])->name('settings.toggle-theme');
 
     // Home Redirect
     Route::get('/home', function () {

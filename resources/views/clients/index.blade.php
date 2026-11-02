@@ -9,6 +9,10 @@
                 <h1 class="text-3xl font-bold text-white mb-2">Clients</h1>
                 <p class="text-gray-400">Manage your client relationships</p>
             </div>
+            <a href="{{ route('reports.customers') }}" class="mt-4 md:mt-0 bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2.5 px-4 rounded-xl flex items-center gap-2 transition-all duration-200 shadow-lg shadow-emerald-900/20">
+                <i class="fas fa-file-excel"></i>
+                <span>Customer Report & Excel</span>
+            </a>
         </div>
 
         <!-- Clients Table -->

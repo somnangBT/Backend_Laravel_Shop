@@ -207,22 +207,46 @@
                             @enderror
                         </div>
 
+                        <!-- Image Live Preview -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-2">Image Preview</label>
+                            <div id="preview-container" class="bg-gray-900/70 border border-gray-700/50 rounded-lg p-4 flex flex-col items-center justify-center min-h-[170px] relative">
+                                <div id="preview-placeholder" class="text-center text-gray-500 py-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-sm font-medium text-gray-400">No image selected</p>
+                                    <p class="text-xs text-gray-600 mt-0.5">Upload a file or enter a URL below to preview</p>
+                                </div>
+                                <div id="preview-image-wrapper" class="hidden w-full flex flex-col items-center">
+                                    <div class="relative group">
+                                        <img id="preview-image" src="#" alt="Product Preview" class="max-h-48 object-contain rounded-lg border border-gray-700/50 shadow-md">
+                                    </div>
+                                    <div id="preview-filename" class="text-xs text-cyan-400 font-medium mt-2 bg-gray-800/80 px-2.5 py-1 rounded border border-gray-700/50 truncate max-w-xs"></div>
+                                    <button type="button" onclick="clearImagePreview()" class="mt-2 text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 px-2.5 py-1 rounded border border-rose-500/30 transition-colors cursor-pointer">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                        Remove Image
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Image Upload -->
                         <div>
                             <label for="image" class="block text-sm font-medium text-gray-300 mb-1">Product Image (Upload)</label>
-                            <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-lg">
+                            <div id="drop-area" class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-700 border-dashed rounded-lg transition-colors">
                                 <div class="space-y-1 text-center">
                                     <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                         <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                     </svg>
-                                    <div class="flex text-sm text-gray-400">
+                                    <div class="flex text-sm text-gray-400 justify-center">
                                         <label for="image" class="relative cursor-pointer bg-gray-800 rounded-md font-medium text-cyan-400 hover:text-cyan-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-cyan-500">
                                             <span class="px-2">Upload a file</span>
-                                            <input id="image" name="image" type="file" class="sr-only">
+                                            <input id="image" name="image" type="file" accept="image/*" class="sr-only" onchange="previewImageFile(this)">
                                         </label>
                                         <p class="pl-1">or drag and drop</p>
                                     </div>
-                                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                                    <p class="text-xs text-gray-500">PNG, JPG, GIF up to 2MB</p>
                                 </div>
                             </div>
                             @error('image')
@@ -245,6 +269,7 @@
                                     name="image_url" 
                                     value="{{ old('image_url') }}"
                                     placeholder="https://example.com/image.jpg"
+                                    oninput="previewImageUrl(this.value)"
                                     class="w-full pl-10 pr-4 py-2.5 bg-gray-900/70 border border-gray-700/50 rounded-lg text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all duration-200"
                                 >
                             </div>
@@ -327,22 +352,101 @@
 </style>
 
 <script>
-    // Preview uploaded image
-    document.addEventListener('DOMContentLoaded', function() {
-        const imageInput = document.getElementById('image');
-        const imageUrlInput = document.getElementById('image_url');
-        
-        if (imageInput) {
-            imageInput.addEventListener('change', function(e) {
-                if (e.target.files && e.target.files[0]) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        // You could add image preview functionality here
-                        console.log('Image loaded:', e.target.result);
-                    }
-                    reader.readAsDataURL(e.target.files[0]);
+    function previewImageFile(input) {
+        const previewWrapper = document.getElementById('preview-image-wrapper');
+        const placeholder = document.getElementById('preview-placeholder');
+        const previewImg = document.getElementById('preview-image');
+        const filenameLabel = document.getElementById('preview-filename');
+
+        if (input.files && input.files[0]) {
+            const file = input.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewWrapper.classList.remove('hidden');
+                placeholder.classList.add('hidden');
+                if (filenameLabel) {
+                    filenameLabel.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
                 }
+            };
+
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function previewImageUrl(url) {
+        const previewWrapper = document.getElementById('preview-image-wrapper');
+        const placeholder = document.getElementById('preview-placeholder');
+        const previewImg = document.getElementById('preview-image');
+        const filenameLabel = document.getElementById('preview-filename');
+        const fileInput = document.getElementById('image');
+
+        if (url && url.trim() !== '') {
+            previewImg.src = url.trim();
+            previewImg.onerror = function() {
+                previewImg.src = '/images/fallback.jpg';
+            };
+            previewWrapper.classList.remove('hidden');
+            placeholder.classList.add('hidden');
+            if (filenameLabel) {
+                filenameLabel.textContent = 'URL: ' + url.trim();
+            }
+        } else if (fileInput && fileInput.files && fileInput.files[0]) {
+            previewImageFile(fileInput);
+        } else {
+            clearImagePreview();
+        }
+    }
+
+    function clearImagePreview() {
+        const previewWrapper = document.getElementById('preview-image-wrapper');
+        const placeholder = document.getElementById('preview-placeholder');
+        const previewImg = document.getElementById('preview-image');
+        const fileInput = document.getElementById('image');
+        const urlInput = document.getElementById('image_url');
+        const filenameLabel = document.getElementById('preview-filename');
+
+        if (fileInput) fileInput.value = '';
+        if (urlInput) urlInput.value = '';
+        previewImg.src = '#';
+        previewWrapper.classList.add('hidden');
+        placeholder.classList.remove('hidden');
+        if (filenameLabel) filenameLabel.textContent = '';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const dropArea = document.getElementById('drop-area');
+        if (dropArea) {
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropArea.classList.add('border-cyan-500', 'bg-cyan-500/10');
+                }, false);
             });
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropArea.classList.remove('border-cyan-500', 'bg-cyan-500/10');
+                }, false);
+            });
+            dropArea.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                if (files && files[0]) {
+                    const fileInput = document.getElementById('image');
+                    fileInput.files = files;
+                    previewImageFile(fileInput);
+                }
+            }, false);
+        }
+
+        // Check if there was an old image URL or old input
+        const urlInput = document.getElementById('image_url');
+        if (urlInput && urlInput.value) {
+            previewImageUrl(urlInput.value);
         }
     });
 </script>

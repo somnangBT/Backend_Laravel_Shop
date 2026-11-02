@@ -220,31 +220,29 @@
                         <!-- Current Image Preview -->
                         <div>
                             <label class="block text-sm font-medium text-gray-300 mb-2">Current Image</label>
-                            <div class="bg-gray-900/70 border border-gray-700/50 rounded-lg p-4 flex items-center justify-center">
-                                @if ($product->image)
+                            <div class="bg-gray-900/70 border border-gray-700/50 rounded-lg p-4 flex flex-col items-center justify-center min-h-[170px] relative">
+                                <div id="no-image-placeholder" class="{{ $product->image ? 'hidden' : '' }} text-center text-gray-500 py-4">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                    </svg>
+                                    <p class="text-sm font-medium text-gray-400">No image available</p>
+                                </div>
+                                <div id="current-image-wrapper" class="{{ $product->image ? '' : 'hidden' }} relative group w-full flex flex-col items-center">
                                     <div class="relative group">
                                         <div class="absolute -inset-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
                                         <div class="relative">
                                             <img 
-                                                src="{{ filter_var($product->image, FILTER_VALIDATE_URL) ? $product->image : Storage::url($product->image) }}"
+                                                src="{{ $product->image ? (filter_var($product->image, FILTER_VALIDATE_URL) ? $product->image : Storage::url($product->image)) : '#' }}" 
                                                 alt="{{ $product->pro_name }}" 
-                                                class="h-40 object-contain rounded-lg" 
+                                                class="max-h-48 object-contain rounded-lg border border-gray-700/50 shadow-md" 
                                                 loading="lazy" 
                                                 onerror="this.src='/images/fallback.jpg'"
                                                 id="current-image"
                                             >
                                         </div>
                                     </div>
-                                @else
-                                    <div class="h-40 w-full flex items-center justify-center text-gray-500">
-                                        <div class="text-center">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-gray-600 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                            </svg>
-                                            <p>No image available</p>
-                                        </div>
-                                    </div>
-                                @endif
+                                    <div id="image-filename" class="text-xs text-cyan-400 font-medium mt-2 bg-gray-800/80 px-2.5 py-1 rounded border border-gray-700/50 truncate max-w-xs"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -386,30 +384,43 @@
     // Preview uploaded image
     function previewImage(input) {
         if (input.files && input.files[0]) {
+            const file = input.files[0];
             const reader = new FileReader();
-            
+            const currentImage = document.getElementById('current-image');
+            const wrapper = document.getElementById('current-image-wrapper');
+            const placeholder = document.getElementById('no-image-placeholder');
+            const filenameLabel = document.getElementById('image-filename');
+
             reader.onload = function(e) {
-                const currentImage = document.getElementById('current-image');
                 if (currentImage) {
                     currentImage.src = e.target.result;
                 }
+                if (wrapper) wrapper.classList.remove('hidden');
+                if (placeholder) placeholder.classList.add('hidden');
+                if (filenameLabel) filenameLabel.textContent = file.name + ' (' + (file.size / 1024).toFixed(1) + ' KB)';
             }
-            
-            reader.readAsDataURL(input.files[0]);
+
+            reader.readAsDataURL(file);
         }
     }
-    
+
     // Preview image from URL
     function previewImageUrl(url) {
-        if (url) {
-            const currentImage = document.getElementById('current-image');
+        const currentImage = document.getElementById('current-image');
+        const wrapper = document.getElementById('current-image-wrapper');
+        const placeholder = document.getElementById('no-image-placeholder');
+        const filenameLabel = document.getElementById('image-filename');
+
+        if (url && url.trim() !== '') {
             if (currentImage) {
-                currentImage.src = url;
-                // Set a fallback in case the URL is invalid
+                currentImage.src = url.trim();
                 currentImage.onerror = function() {
                     this.src = '/images/fallback.jpg';
                 }
             }
+            if (wrapper) wrapper.classList.remove('hidden');
+            if (placeholder) placeholder.classList.add('hidden');
+            if (filenameLabel) filenameLabel.textContent = 'URL: ' + url.trim();
         }
     }
 </script>

@@ -32,6 +32,11 @@ class Product extends Model
         return $this->price * (1 - ($this->discount ?? 0) / 100);
     }
 
+    public function getNameAttribute()
+    {
+        return $this->pro_name;
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class, 'category_id', 'cat_id');
