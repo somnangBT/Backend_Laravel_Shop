@@ -106,3 +106,18 @@ Route::middleware(['auth', 'admin'])->group(function () {
         return redirect()->route('products.index');
     })->name('home');
 });
+
+// Public Storage Route for uploaded assets (Serverless support)
+Route::get('/storage/{path}', function ($path) {
+    $paths = [
+        config('filesystems.disks.public.root') . '/' . $path,
+        storage_path('app/public/' . $path),
+        public_path('storage/' . $path),
+    ];
+    foreach ($paths as $file) {
+        if (file_exists($file) && !is_dir($file)) {
+            return response()->file($file);
+        }
+    }
+    abort(404);
+})->where('path', '.*');
