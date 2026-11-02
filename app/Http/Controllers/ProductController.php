@@ -294,7 +294,9 @@ class ProductController extends Controller
         }
 
         try {
-            $response = Http::asForm()->timeout(30)->post('https://api.imgbb.com/1/upload', [
+            $response = Http::withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            ])->asForm()->timeout(30)->post('https://api.imgbb.com/1/upload', [
                 'key' => $apiKey,
                 'image' => base64_encode(file_get_contents($imageFile->getRealPath())),
             ]);

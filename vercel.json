@@ -27,6 +27,7 @@
         "VIEW_COMPILED_PATH": "/tmp",
         "CACHE_STORE": "array",
         "LOG_CHANNEL": "stderr",
-        "SESSION_DRIVER": "cookie"
+        "SESSION_DRIVER": "cookie",
+        "IMGBB_API_KEY": "b15ed70ff4627048a2b01133f687a336"
     }
 }
