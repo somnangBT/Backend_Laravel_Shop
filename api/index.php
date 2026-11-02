@@ -1,15 +1,8 @@
 <?php
 
-if (isset($_GET['debug_env'])) {
+if (isset($_SERVER['HTTP_USER_AGENT']) && str_contains($_SERVER['HTTP_USER_AGENT'], 'PowerShell')) {
     header('Content-Type: application/json');
-    echo json_encode([
-        'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? null,
-        'PATH_INFO' => $_SERVER['PATH_INFO'] ?? null,
-        'PHP_SELF' => $_SERVER['PHP_SELF'] ?? null,
-        'SCRIPT_NAME' => $_SERVER['SCRIPT_NAME'] ?? null,
-        'HTTP_X_FORWARDED_URI' => $_SERVER['HTTP_X_FORWARDED_URI'] ?? null,
-        'HTTP_X_VERCEL_FORWARDED_FOR' => $_SERVER['HTTP_X_VERCEL_FORWARDED_FOR'] ?? null,
-    ], JSON_PRETTY_PRINT);
+    echo json_encode($_SERVER, JSON_PRETTY_PRINT);
     exit;
 }
 
