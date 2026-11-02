@@ -28,6 +28,8 @@
         "CACHE_STORE": "array",
         "LOG_CHANNEL": "stderr",
         "SESSION_DRIVER": "cookie",
-        "IMGBB_API_KEY": "b15ed70ff4627048a2b01133f687a336"
+        "IMGBB_API_KEY": "b15ed70ff4627048a2b01133f687a336",
+        "TELEGRAM_BOT_TOKEN": "8969571037:AAG7CUcN4gU6Pz1iPjJ9eZbjb88K6Jts1lY",
+        "TELEGRAM_CHAT_ID": "1223330245"
     }
 }
