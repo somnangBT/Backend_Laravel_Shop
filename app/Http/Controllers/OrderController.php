@@ -375,7 +375,7 @@ class OrderController extends Controller
 
         $user = Auth::guard('sanctum')->user() ?? Auth::user();
 
-        // ពិនិត្យការទូទាត់ ABA KHQR / Bakong ពី Server
+        // ពិនិត្យការទូទាត់ Bakong KHQR (Auto MD5 Verification) ឬ ABA Direct KHQR
         $paymentMethod = $request->input('payment_method', 'cash');
         $khqrMd5 = $request->input('khqr_md5');
         $paymentProof = $request->input('payment_proof');
@@ -383,9 +383,8 @@ class OrderController extends Controller
         $bakongRef = $request->input('bakong_ref');
         $bakongSender = null;
 
-        if ($paymentMethod === 'khqr' || $paymentMethod === 'bakong_aba') {
-            $bakongId = config('services.bakong.account_id');
-            if ($khqrMd5 && $bakongId && $bakongId !== 'abaakhppxxx@abaa') {
+        if (in_array($paymentMethod, ['khqr', 'aba_khqr', 'bakong_aba'])) {
+            if ($khqrMd5) {
                 $bakongCheck = $this->checkBakongMd5($khqrMd5);
                 if ($bakongCheck['paid']) {
                     $paymentStatus = 'paid';
@@ -458,6 +457,8 @@ class OrderController extends Controller
                 'status' => 'success',
                 'message' => 'Order placed successfully',
                 'order_id' => $order->id,
+                'payment_status' => $order->payment_status,
+                'bakong_ref' => $order->bakong_ref,
                 'order' => $order
             ], 201);
 
@@ -636,22 +637,29 @@ class OrderController extends Controller
             }
 
             $customerName = $order->customer_name ?: (optional($order->user)->name ?? 'អតិថិជនទូទៅ (Guest)');
-            $isKhqr = in_array($order->payment_method, ['khqr', 'bakong_aba']);
+            $isAbaDirect = $order->payment_method === 'aba_khqr';
+            $isKhqr = in_array($order->payment_method, ['khqr', 'aba_khqr', 'bakong_aba']);
             $abaAccount = config('services.bakong.aba_account', '007842694');
-            $merchantName = config('services.bakong.merchant_name', 'YORN SOMNANG');
-            $paymentMethodLabel = $isKhqr
-                ? "🏦 ABA KHQR ({$merchantName} • {$abaAccount})"
-                : '💵 សាច់ប្រាក់សុទ្ធ (Cash on Delivery)';
+            $bakongId = config('services.bakong.account_id', 'somnang_yorn@bkrt');
+
+            if ($isAbaDirect) {
+                $paymentMethodLabel = "🏦 ABA Direct KHQR (YORN SOMNANG • {$abaAccount})";
+            } elseif ($isKhqr) {
+                $paymentMethodLabel = "⚡ Bakong KHQR ({$bakongId})";
+            } else {
+                $paymentMethodLabel = '💵 សាច់ប្រាក់សុទ្ធ (Cash on Delivery)';
+            }
 
             if ($order->payment_status === 'paid' && $order->bakong_ref) {
-                $paymentStatusText = "✅ បង់លុយពិតរួចរាល់ (Verified)\n🧾 Ref: {$order->bakong_ref}" . ($bakongSender ? "\n🏦 ផ្ញើពី: {$bakongSender}" : "");
+                $paymentStatusText = "✅ បង់លុយពិតរួចរាល់ (Bakong Verified)\n🧾 Ref: {$order->bakong_ref}" . ($bakongSender ? "\n🏦 ផ្ញើពី: {$bakongSender}" : "");
             } elseif ($order->payment_status === 'awaiting_approval') {
-                $paymentStatusText = "🧾 អតិថិជនបានបង់លុយចូល ABA {$abaAccount} (រង់ចាំ Admin ពិនិត្យ Approve)"
+                $dest = $isAbaDirect ? "ABA {$abaAccount}" : "Bakong {$bakongId}";
+                $paymentStatusText = "🧾 អតិថិជនបានបង់លុយចូល {$dest} (រង់ចាំ Admin ពិនិត្យ Approve)"
                     . ($order->bakong_ref ? "\n🔖 យោង/អ្នកផ្ញើ: {$order->bakong_ref}" : "");
             } elseif ($order->payment_status === 'paid') {
                 $paymentStatusText = "✅ បានទូទាត់ប្រាក់រួចរាល់";
             } else {
-                $paymentStatusText = $isKhqr ? "⏳ រង់ចាំ Admin ពិនិត្យលុយចូល ABA ({$abaAccount})" : "💵 ទូទាត់ពេលដឹក";
+                $paymentStatusText = $isKhqr ? "⏳ រង់ចាំ Admin ពិនិត្យលុយចូល" : "💵 ទូទាត់ពេលដឹក";
             }
 
             $phone = $order->phone ?: 'មិនទាន់បញ្ជាក់';
@@ -661,8 +669,11 @@ class OrderController extends Controller
             $adminBase = rtrim(config('app.url') ?: env('APP_URL', 'https://backend-laravel-shop.vercel.app'), '/');
             $adminUrl = "{$adminBase}/orders?payment_status=paid_pending_approval";
 
-            $message = "🛒 មានការបញ្ជាទិញថ្មី (Order #{$order->id})!\n"
-                     . "⏳ ស្ថានភាព: PENDING — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n"
+            $headerLine = ($order->payment_status === 'paid')
+                ? "🎉 ភ្ញៀវបានបង់លុយពិតរួចរាល់ (Order #{$order->id})!\n⏳ ស្ថានភាព: PAID — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n"
+                : "🛒 មានការបញ្ជាទិញថ្មី (Order #{$order->id})!\n⏳ ស្ថានភាព: PENDING — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n";
+
+            $message = $headerLine
                      . "👤 អតិថិជន: {$customerName}\n"
                      . "📞 ទូរស័ព្ទ: {$phone}\n"
                      . "📍 ទីតាំងដឹក: {$address}\n"

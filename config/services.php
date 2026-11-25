@@ -42,8 +42,8 @@ return [
 
     'bakong' => [
         'token' => env('BAKONG_TOKEN'),
-        'account_id' => env('BAKONG_ACCOUNT_ID', 'abaakhppxxx@abaa'),
-        'merchant_name' => env('BAKONG_MERCHANT_NAME', 'YORN SOMNANG'),
+        'account_id' => env('BAKONG_ACCOUNT_ID', 'somnang_yorn@bkrt'),
+        'merchant_name' => env('BAKONG_MERCHANT_NAME', 'SOMNANG YORN'),
         'aba_account' => env('ABA_ACCOUNT_NUMBER', '007842694'),
     ],
 

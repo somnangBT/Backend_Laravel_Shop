@@ -188,8 +188,10 @@
                             <!-- Payment Method & Status -->
                             <td class="py-4 px-4 text-center whitespace-nowrap">
                                 <div class="text-xs font-semibold uppercase text-gray-300 flex items-center justify-center gap-1">
-                                    @if(in_array($order->payment_method, ['khqr', 'bakong_aba']))
-                                        <span class="px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-700/60 text-[10px]">ABA KHQR</span>
+                                    @if($order->payment_method === 'aba_khqr')
+                                        <span class="px-1.5 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-700/60 text-[10px]">🏦 ABA KHQR</span>
+                                    @elseif(in_array($order->payment_method, ['khqr', 'bakong_aba']))
+                                        <span class="px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-700/60 text-[10px]">⚡ Bakong KHQR</span>
                                     @else
                                         <span>{{ $order->payment_method ?: 'Cash' }}</span>
                                     @endif
