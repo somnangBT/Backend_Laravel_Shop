@@ -11,6 +11,7 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'customer_name',
         'subtotal',
         'tax',
         'shipping',
@@ -22,6 +23,9 @@ class Order extends Model
         'email',
         'payment_method',
         'payment_status',
+        'payment_proof',
+        'khqr_md5',
+        'bakong_ref',
         'shipping_address',
         'phone',
     ];

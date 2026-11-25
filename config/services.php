@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+    ],
+
+    'bakong' => [
+        'token' => env('BAKONG_TOKEN'),
+        'account_id' => env('BAKONG_ACCOUNT_ID', 'abaakhppxxx@abaa'),
+        'merchant_name' => env('BAKONG_MERCHANT_NAME', 'YORN SOMNANG'),
+        'aba_account' => env('ABA_ACCOUNT_NUMBER', '007842694'),
+    ],
+
 ];

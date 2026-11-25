@@ -35,10 +35,36 @@
         </div>
     </div>
 
+    <!-- Paid & Pending Admin Delivery Approval Alert -->
+    @if(($counts['paid_pending_approval'] ?? 0) > 0)
+        <div class="mb-5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-teal-950/80 to-cyan-950/80 border border-emerald-500/40 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 flex-shrink-0">
+                    <i class="fas fa-qrcode text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-sm font-bold text-emerald-300">
+                        💳 មានការបញ្ជាទិញចំនួន {{ $counts['paid_pending_approval'] }} បានបង់ប្រាក់តាម KHQR / ភ្ជាប់វិក្កយបត្រ និងកំពុងរង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន!
+                    </div>
+                    <div class="text-xs text-gray-300 mt-0.5">
+                        សូមពិនិត្យលុយចូល Bakong ឬរូបវិក្កយបត្រ រួចចុចប៊ូតុង <strong class="text-white">«Approve & ដឹកជញ្ជូន»</strong>។
+                    </div>
+                </div>
+            </div>
+            <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}"
+               class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-xs whitespace-nowrap transition-all shadow-md">
+                🔍 មើលបញ្ជីរង់ចាំ Approve ({{ $counts['paid_pending_approval'] }})
+            </a>
+        </div>
+    @endif
+
     <!-- Status Tabs / Filter Pills -->
     <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
-        <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ !request('status') || request('status') === 'all' ? 'theme-bg-gradient text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+        <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ !request('status') && !request('payment_status') ? 'theme-bg-gradient text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
             All Orders ({{ $counts['all'] }})
+        </a>
+        <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('payment_status') === 'paid_pending_approval' ? 'bg-emerald-500 text-gray-950 shadow-md font-bold' : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 border border-emerald-700/50' }}">
+            💳 បង់លុយរួច (រង់ចាំ Approve) ({{ $counts['paid_pending_approval'] ?? 0 }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'pending']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'pending' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
             Pending ({{ $counts['pending'] }})
@@ -67,7 +93,7 @@
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
                         <i class="fas fa-search"></i>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by Order ID, customer name, email, phone..." 
+                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by Order ID, customer name, email, phone, Bakong ref..." 
                            class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 pl-9 pr-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
                 </div>
             </div>
@@ -75,9 +101,11 @@
             <div>
                 <select name="payment_status" class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 px-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500">
                     <option value="all">All Payment Statuses</option>
-                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>Payment Pending</option>
-                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Paid</option>
-                    <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>Refunded</option>
+                    <option value="paid_pending_approval" {{ request('payment_status') === 'paid_pending_approval' ? 'selected' : '' }}>💳 Paid & Waiting Approve</option>
+                    <option value="awaiting_approval" {{ request('payment_status') === 'awaiting_approval' ? 'selected' : '' }}>🧾 Slip Submitted (Verify)</option>
+                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>⏳ Payment Pending</option>
+                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>✅ Paid</option>
+                    <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>↩️ Refunded</option>
                 </select>
             </div>
 
@@ -124,7 +152,7 @@
                             <!-- Customer -->
                             <td class="py-4 px-4 whitespace-nowrap">
                                 <div class="font-semibold text-white">
-                                    {{ optional($order->user)->name ?? ($order->email ?: 'Guest Customer') }}
+                                    {{ $order->customer_name ?: (optional($order->user)->name ?? ($order->email ?: 'Guest Customer')) }}
                                 </div>
                                 <div class="text-xs text-gray-400 flex items-center gap-1.5 mt-0.5">
                                     <i class="fas fa-phone-alt text-[10px] text-gray-500"></i>
@@ -144,7 +172,7 @@
                                         <div class="text-xs text-gray-300 flex items-center justify-between gap-3">
                                             <span class="truncate max-w-[160px]">
                                                 <span class="font-bold text-cyan-400">{{ $item->quantity }}x</span> 
-                                                {{ optional($item->product)->name ?? 'Item' }}
+                                                {{ optional($item->product)->pro_name ?? optional($item->product)->name ?? 'Item' }}
                                             </span>
                                             <span class="font-mono text-gray-400 text-[11px]">${{ number_format($item->price * $item->quantity, 2) }}</span>
                                         </div>
@@ -159,18 +187,36 @@
 
                             <!-- Payment Method & Status -->
                             <td class="py-4 px-4 text-center whitespace-nowrap">
-                                <div class="text-xs font-semibold uppercase text-gray-300">
-                                    {{ $order->payment_method ?: 'Cash' }}
+                                <div class="text-xs font-semibold uppercase text-gray-300 flex items-center justify-center gap-1">
+                                    @if(in_array($order->payment_method, ['khqr', 'bakong_aba']))
+                                        <span class="px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-700/60 text-[10px]">ABA KHQR</span>
+                                    @else
+                                        <span>{{ $order->payment_method ?: 'Cash' }}</span>
+                                    @endif
                                 </div>
+                                @if($order->bakong_ref)
+                                    <div class="text-[10px] {{ $order->payment_status === 'paid' ? 'text-emerald-400' : 'text-cyan-300' }} font-mono mt-1" title="Ref / Sender: {{ $order->bakong_ref }}">
+                                        {{ $order->payment_status === 'paid' ? '✅ Paid Ref:' : '🔖 Ref:' }} {{ \Illuminate\Support\Str::limit($order->bakong_ref, 22) }}
+                                    </div>
+                                @endif
                                 <form action="{{ route('orders.update-status', $order->id) }}" method="POST" class="inline-block mt-1">
                                     @csrf
                                     <select name="payment_status" onchange="this.form.submit()" 
-                                            class="text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer focus:outline-none {{ $order->payment_status === 'paid' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : 'bg-amber-950 text-amber-400 border border-amber-800' }}">
+                                            class="text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer focus:outline-none {{ $order->payment_status === 'paid' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : ($order->payment_status === 'awaiting_approval' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'bg-amber-950 text-amber-400 border border-amber-800') }}">
                                         <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                        <option value="awaiting_approval" {{ $order->payment_status === 'awaiting_approval' ? 'selected' : '' }}>Awaiting Approve</option>
                                         <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Paid</option>
                                         <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
                                     </select>
                                 </form>
+                                @if($order->payment_proof)
+                                    <div class="mt-1.5">
+                                        <button type="button" onclick="openSlipModal('{{ $order->payment_proof }}', {{ $order->id }})"
+                                                class="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded bg-indigo-950 hover:bg-indigo-900 text-indigo-300 border border-indigo-700 transition-colors">
+                                            <i class="fas fa-receipt"></i> View Slip
+                                        </button>
+                                    </div>
+                                @endif
                             </td>
 
                             <!-- Order Status with Quick Change -->
@@ -202,6 +248,18 @@
                             <!-- Actions -->
                             <td class="py-4 px-4 text-center whitespace-nowrap">
                                 <div class="flex items-center justify-center gap-1.5">
+                                    @if($order->status === 'pending')
+                                        <form action="{{ route('orders.approve', $order->id) }}" method="POST" class="inline">
+                                            @csrf
+                                            <button type="submit"
+                                                    onclick="return confirm('អនុម័តការបង់ប្រាក់ និងបញ្ជូន Order #{{ $order->id }} ទៅដឹកជញ្ជូន?')"
+                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md transition-all"
+                                                    title="Approve Payment & Start Delivery">
+                                                <i class="fas fa-check"></i>
+                                                <span>Approve & ដឹក</span>
+                                            </button>
+                                        </form>
+                                    @endif
                                     <!-- Print Receipt Button -->
                                     <button onclick="printOrderReceipt({{ json_encode($order) }})" 
                                             class="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700 transition-colors" title="Print Receipt">
@@ -234,6 +292,27 @@
 
 </div>
 
+<!-- Payment Slip Modal -->
+<div id="slipModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4" onclick="closeSlipModal()">
+    <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-4 shadow-2xl" onclick="event.stopPropagation()">
+        <div class="flex items-center justify-between mb-3">
+            <h3 id="slipModalTitle" class="text-white font-bold text-base">🧾 វិក្កយបត្របង់ប្រាក់</h3>
+            <button type="button" onclick="closeSlipModal()" class="text-gray-400 hover:text-white text-lg px-2">&times;</button>
+        </div>
+        <div class="bg-black rounded-xl overflow-hidden flex items-center justify-center max-h-[70vh]">
+            <img id="slipModalImg" src="" alt="Payment Slip" class="max-h-[70vh] w-auto object-contain">
+        </div>
+        <div class="mt-3 flex justify-end gap-2">
+            <a id="slipModalLink" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold">
+                បើករូបភាពពេញ ↗
+            </a>
+            <button type="button" onclick="closeSlipModal()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold">
+                បិទ
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Printable Receipt Template (Hidden until printed) -->
 <div id="receiptPrintArea" class="hidden">
     <div style="width: 80mm; font-family: monospace; font-size: 12px; padding: 10px; color: #000; background: #fff;" id="receiptContent">
@@ -242,10 +321,25 @@
 </div>
 
 <script>
+function openSlipModal(url, orderId) {
+    document.getElementById('slipModalTitle').textContent = '🧾 វិក្កយបត្របង់ប្រាក់ — Order #' + orderId;
+    document.getElementById('slipModalImg').src = url;
+    document.getElementById('slipModalLink').href = url;
+    const modal = document.getElementById('slipModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeSlipModal() {
+    const modal = document.getElementById('slipModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+}
+
 function printOrderReceipt(order) {
     const itemsHtml = (order.order_items || []).map(item => `
         <tr style="border-bottom: 1px dashed #ccc;">
-            <td style="padding: 4px 0;">${item.quantity}x ${item.product ? item.product.name : 'Item'}</td>
+            <td style="padding: 4px 0;">${item.quantity}x ${item.product ? (item.product.pro_name || item.product.name || 'Item') : 'Item'}</td>
             <td style="text-align: right; padding: 4px 0;">$${(item.price * item.quantity).toFixed(2)}</td>
         </tr>
     `).join('');

@@ -19,6 +19,7 @@
     "env": {
         "APP_ENV": "production",
         "APP_DEBUG": "false",
+        "APP_URL": "https://backend-laravel-shop.vercel.app",
         "APP_CONFIG_CACHE": "/tmp/config.php",
         "APP_EVENTS_CACHE": "/tmp/events.php",
         "APP_PACKAGES_CACHE": "/tmp/packages.php",
@@ -30,6 +31,10 @@
         "SESSION_DRIVER": "cookie",
         "IMGBB_API_KEY": "b15ed70ff4627048a2b01133f687a336",
         "TELEGRAM_BOT_TOKEN": "8969571037:AAG7CUcN4gU6Pz1iPjJ9eZbjb88K6Jts1lY",
-        "TELEGRAM_CHAT_ID": "1223330245"
+        "TELEGRAM_CHAT_ID": "1223330245",
+        "BAKONG_TOKEN": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkYXRhIjp7ImlkIjoiYjIyZDRjZDA4ZTc4NDJlMyJ9LCJpYXQiOjE3OTUxMzk4MTIsImV4cCI6MTgwMjkxNTgxMn0.UjpR0XLTjHWsTQlD6DPbp_XRJ-qzycKUfV_LHICrd_s",
+        "BAKONG_ACCOUNT_ID": "abaakhppxxx@abaa",
+        "BAKONG_MERCHANT_NAME": "YORN SOMNANG",
+        "ABA_ACCOUNT_NUMBER": "007842694"
     }
 }

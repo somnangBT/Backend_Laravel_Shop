@@ -50,6 +50,7 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
     Route::get('/orders/kitchen', [OrderController::class, 'kitchen'])->name('orders.kitchen');
     Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
+    Route::post('/orders/{order}/approve', [OrderController::class, 'approveForDelivery'])->name('orders.approve');
 
     // Cart/Order Routes (បងអាចប្ដូរ PurchaseController ទៅ OrderController ទាំងអស់ក៏បានបើចង់)
     Route::get('/cart', [PurchaseController::class, 'index'])->name('cart.index');

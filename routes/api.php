@@ -39,6 +39,10 @@ Route::get('/orders', [OrderController::class, 'apiIndex']);
 Route::post('/orders', [OrderController::class, 'store']);
 Route::post('/orders/{id}/cancel', [OrderController::class, 'cancelApi']);
 
+// Bakong KHQR Real-Time Payment Check & Telegram Bot Webhook
+Route::post('/bakong/check-payment', [OrderController::class, 'checkBakongPayment']);
+Route::post('/telegram/webhook', [OrderController::class, 'telegramWebhook']);
+
 
 // =============================================
 // PROTECTED ROUTES (Authentication Required)
