@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
+    <title>LuckShop — Admin Login</title>
     <!-- Favicon -->
-    <link rel="icon" href="https://www.shutterstock.com/image-vector/vector-cat-face-minimalist-adorable-600nw-2426797721.jpg" type="image/x-icon">
+    <link rel="icon" href="/images/luckshop-logo.png" type="image/png">
    
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -68,41 +68,37 @@
   </div>
 
   <div
-    class="w-full max-w-md p-8 rounded-2xl shadow-2xl glass-effect border border-gray-700 relative overflow-hidden"
+    class="w-full max-w-3xl rounded-2xl shadow-2xl glass-effect border border-gray-700 relative overflow-hidden grid grid-cols-1 md:grid-cols-2"
     data-aos="fade-up"
-    data-aos-duration="1000"
-    data-aos-easing="ease-in-out"
+    data-aos-duration="700"
   >
-    <!-- Decorative circle -->
-    <div class="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-accent-blue opacity-10"></div>
-    <div class="absolute -bottom-20 -left-20 w-40 h-40 rounded-full bg-accent-blue opacity-10"></div>
-    
-    <div class="relative z-10">
-      <!-- Logo -->
-      <div class="flex justify-center mb-6">
-        <div class="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-accent-blue to-accent-hover shadow-glow" data-aos="zoom-in" data-aos-delay="200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-          </svg>
-        </div>
+    <!-- Left Column: Login Form -->
+    <div class="relative z-10 p-8 sm:p-10">
+      <!-- Compact Shop Logo on Mobile -->
+      <div class="flex justify-center mb-5 md:hidden">
+        <img
+          src="/images/luckshop-logo.png"
+          alt="LuckShop Logo"
+          class="w-16 h-16 rounded-full object-cover border-2 border-amber-400/60 shadow-lg bg-white"
+        >
       </div>
-      
-      <h2 class="text-3xl font-bold text-center mb-2 text-white" data-aos="fade-down" data-aos-delay="300">Login to Admin</h2>
-      <p class="text-center text-gray-400 mb-8" data-aos="fade-down" data-aos-delay="400">Sign in to continue your Account</p>
+
+      <h2 class="text-3xl font-bold mb-2 text-white text-center md:text-left">Login to Admin</h2>
+      <p class="text-gray-400 mb-8 text-center md:text-left">Sign in to continue your Account</p>
 
       @if (session('success'))
-        <div class="mb-6 px-4 py-3 rounded-lg bg-green-900/50 border border-green-500" data-aos="fade-in" data-aos-delay="500">
+        <div class="mb-6 px-4 py-3 rounded-lg bg-green-900/50 border border-green-500">
           <p class="text-green-400 text-center text-sm">{{ session('success') }}</p>
         </div>
       @endif
 
       @if ($errors->any())
-        <div class="mb-6 px-4 py-3 rounded-lg bg-red-900/50 border border-red-500" data-aos="fade-in" data-aos-delay="500">
+        <div class="mb-6 px-4 py-3 rounded-lg bg-red-900/50 border border-red-500">
           <p class="text-red-400 text-center text-sm">{{ $errors->first() }}</p>
         </div>
       @endif
 
-      <form action="{{ route('login') }}" method="POST" class="space-y-6" data-aos="fade-up" data-aos-delay="600">
+      <form action="{{ route('login') }}" method="POST" class="space-y-6">
         @csrf
 
         <div class="relative">
@@ -116,6 +112,7 @@
             <input
               type="email"
               name="email"
+              value="{{ old('email') }}"
               class="w-full pl-10 pr-4 py-3 rounded-lg bg-gray-800/70 border border-gray-700 placeholder-gray-500 text-gray-100 transition-all input-focus focus:outline-none focus:ring-2 focus:ring-accent-blue"
               placeholder="you@example.com"
               required
@@ -169,10 +166,17 @@
           </button>
         </div>
       </form>
+    </div>
 
-     
-
-      
+    <!-- Right Column: Shop Logo -->
+    <div class="hidden md:flex flex-col items-center justify-center p-8 bg-slate-900/75 border-l border-gray-700/80 text-center">
+      <img
+        src="/images/luckshop-logo.png"
+        alt="LuckShop Logo"
+        class="w-48 h-48 rounded-full object-cover border-2 border-amber-400/60 shadow-2xl bg-white mb-5"
+      >
+      <h3 class="text-2xl font-bold text-white tracking-wide">Luck<span class="text-orange-400">Shop</span></h3>
+      <p class="text-sm text-gray-400 mt-1">Admin Management Portal</p>
     </div>
   </div>
 

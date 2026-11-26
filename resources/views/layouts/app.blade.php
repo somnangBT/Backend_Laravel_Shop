@@ -6,7 +6,7 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>LuckShop | Admin</title>
     <!-- Favicon -->
-    <link rel="icon" href="https://i.ytimg.com/vi/x_9SdeVjfe4/hq720.jpg?sqp=-oaymwEhCK4FEIIDSFryq4qpAxMIARUAAAAAGAElAADIQj0AgKJD&rs=AOn4CLAHJnuMKW_ny8rT3ZCRZPM8jsPCRQ" type="image/x-icon">
+    <link rel="icon" href="/images/luckshop-logo.png" type="image/png">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Tailwind CSS -->
@@ -637,11 +637,11 @@
             <!-- Logo and Title -->
             <div class="flex items-center h-16 px-4 border-b border-sidebar-border">
                 <div class="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-sidebar-accent transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-                        <path d="M2 17l10 5 10-5"/>
-                        <path d="M2 12l10 5 10-5"/>
-                    </svg>
+                    <img
+                        src="/images/luckshop-logo.png"
+                        alt="LuckShop"
+                        class="w-8 h-8 rounded-full object-cover border border-amber-400/60 shrink-0 bg-white"
+                    >
                     <h1 class="ml-3 text-xl font-bold sidebar-logo-text">LuckShop</h1>
                 </div>
                 <button id="sidebar-toggle" class="ml-auto text-sidebar-foreground hover:text-sidebar-accent transition-colors">

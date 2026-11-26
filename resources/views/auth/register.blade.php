@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Register</title>
+    <title>LuckShop — Register</title>
     <!-- Favicon -->
-    <link rel="icon" href="https://www.shutterstock.com/image-vector/vector-cat-face-minimalist-adorable-600nw-2426797721.jpg" type="image/x-icon">
+    <link rel="icon" href="/images/luckshop-logo.png" type="image/png">
    
     <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -107,11 +107,11 @@
     <div class="relative z-10">
       <!-- Logo -->
       <div class="flex justify-center mb-6">
-        <div class="w-16 h-16 rounded-full flex items-center justify-center bg-gradient-to-br from-accent-blue to-accent-hover shadow-glow" data-aos="zoom-in" data-aos-delay="200">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-          </svg>
-        </div>
+        <img
+          src="/images/luckshop-logo.png"
+          alt="LuckShop Logo"
+          class="w-16 h-16 rounded-full object-cover border-2 border-amber-400/60 shadow-glow bg-white"
+        >
       </div>
       
       <h2 class="text-3xl font-bold text-center mb-2 text-white" data-aos="fade-down" data-aos-delay="300">Create Account</h2>
