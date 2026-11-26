@@ -167,15 +167,36 @@ class OrderController extends Controller
 
         $previousStatus = $order->status;
 
-        if ($request->filled('status')) {
-            $order->status = $validated['status'];
-        }
+        DB::transaction(function () use ($request, $order, $validated, $previousStatus) {
+            if ($request->filled('status')) {
+                $order->status = $validated['status'];
+            }
 
-        if ($request->filled('payment_status')) {
-            $order->payment_status = $validated['payment_status'];
-        }
+            if ($request->filled('payment_status')) {
+                $order->payment_status = $validated['payment_status'];
+            }
 
-        $order->save();
+            $order->save();
+
+            // Restore or re-deduct stock atomically when Admin cancels/uncancels an order
+            if ($request->filled('status') && $order->status !== $previousStatus) {
+                if ($order->status === 'cancelled') {
+                    $order->loadMissing('orderItems');
+                    foreach ($order->orderItems as $item) {
+                        if ($item->product_id && $item->quantity > 0) {
+                            Product::where('pro_id', $item->product_id)->increment('qty', (int) $item->quantity);
+                        }
+                    }
+                } elseif ($previousStatus === 'cancelled') {
+                    $order->loadMissing('orderItems');
+                    foreach ($order->orderItems as $item) {
+                        if ($item->product_id && $item->quantity > 0) {
+                            Product::where('pro_id', $item->product_id)->decrement('qty', (int) $item->quantity);
+                        }
+                    }
+                }
+            }
+        });
 
         if ($request->filled('status') && $order->status !== $previousStatus && in_array($order->status, ['preparing', 'delivering', 'completed'])) {
             $this->sendTelegramApprovalNotification($order, 'Admin Panel');
@@ -402,26 +423,59 @@ class OrderController extends Controller
     }
 
     /**
-     * API: Cancel an order from React Frontend
+     * API: Cancel an order from React Frontend (requires ownership verification & restores stock)
      */
     public function cancelApi(Request $request, $id)
     {
-        $order = Order::find($id);
-        if (!$order) {
-            return response()->json(['status' => 'error', 'message' => 'Order not found'], 404);
-        }
+        $authUser = Auth::guard('sanctum')->user() ?? Auth::user();
 
-        if (in_array($order->status, ['completed', 'delivering'])) {
-            return response()->json(['status' => 'error', 'message' => 'Cannot cancel an order that is already completed or in delivery'], 400);
-        }
+        $txResult = DB::transaction(function () use ($request, $id, $authUser) {
+            $order = Order::with('orderItems')->lockForUpdate()->find($id);
+            if (!$order) {
+                return ['error' => 'Order not found', 'code' => 404];
+            }
 
-        $order->status = 'cancelled';
-        $order->save();
+            // Ownership check: authenticated Sanctum user (or exact user_id + email match)
+            $isOwner = false;
+            if ($authUser) {
+                $isOwner = $authUser->isAdmin() || (int) $authUser->id === (int) $order->user_id;
+            } elseif ($request->filled('user_id') && $request->filled('email')) {
+                $isOwner = (int) $request->input('user_id') === (int) $order->user_id
+                    && strcasecmp((string) $request->input('email'), (string) $order->email) === 0;
+            }
+
+            if (!$isOwner) {
+                return ['error' => 'Unauthorized to cancel this order', 'code' => 403];
+            }
+
+            if (in_array($order->status, ['completed', 'delivering'])) {
+                return ['error' => 'Cannot cancel an order that is already completed or in delivery', 'code' => 400];
+            }
+
+            if ($order->status !== 'cancelled') {
+                foreach ($order->orderItems as $item) {
+                    if ($item->product_id && $item->quantity > 0) {
+                        Product::where('pro_id', $item->product_id)->increment('qty', (int) $item->quantity);
+                    }
+                }
+                $order->status = 'cancelled';
+                $order->save();
+            }
+
+            return ['order' => $order];
+        });
+
+        if (isset($txResult['error'])) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $txResult['error'],
+            ], $txResult['code']);
+        }
 
         return response()->json([
             'status' => 'success',
             'message' => 'Order cancelled successfully',
-            'data' => $order
+            'data' => $txResult['order'],
         ]);
     }
 
@@ -600,6 +654,30 @@ class OrderController extends Controller
                     }
                 }
 
+                // Lock products & verify available stock atomically
+                $neededByProduct = [];
+                foreach ($verifiedItems as $vItem) {
+                    $pid = $vItem['product_id'];
+                    $neededByProduct[$pid] = ($neededByProduct[$pid] ?? 0) + (int) $vItem['quantity'];
+                }
+
+                $lockedProducts = Product::whereIn('pro_id', array_keys($neededByProduct))
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('pro_id');
+
+                foreach ($neededByProduct as $pid => $neededQty) {
+                    $prod = $lockedProducts->get($pid);
+                    if (!$prod || (int) $prod->qty < $neededQty) {
+                        $avail = $prod ? (int) $prod->qty : 0;
+                        $pName = $prod ? $prod->pro_name : ('Product #' . $pid);
+                        return [
+                            'error' => "សូមអភ័យទោស! ទំនិញ «{$pName}» នៅសល់ស្តុកតែ {$avail} ប៉ុណ្ណោះ (មិនគ្រប់ {$neededQty} ទេ)។",
+                            'code' => 422,
+                        ];
+                    }
+                }
+
                 $candidateId = $user ? $user->id : $request->input('user_id');
                 $resolvedUserId = ($candidateId && \App\Models\User::where('id', $candidateId)->exists())
                     ? $candidateId
@@ -630,7 +708,7 @@ class OrderController extends Controller
                     'phone' => $request->phone ?? null,
                 ]);
 
-                // ៣. បញ្ចូលផលិតផលទៅក្នុងតារាង Order Items តាមតម្លៃពិតពី Database
+                // ៣. បញ្ចូលផលិតផលទៅក្នុងតារាង Order Items និងកាត់ស្តុក
                 foreach ($verifiedItems as $item) {
                     OrderItem::create([
                         'order_id' => $order->id,
@@ -639,6 +717,10 @@ class OrderController extends Controller
                         'price' => $item['price'],
                         'discount' => $item['discount'],
                     ]);
+                }
+
+                foreach ($neededByProduct as $pid => $neededQty) {
+                    Product::where('pro_id', $pid)->decrement('qty', $neededQty);
                 }
 
                 // លុប Cart ចោលក្រោយទិញរួច

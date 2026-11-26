@@ -17,11 +17,9 @@ Route::middleware(['api'])->group(function () {
     Route::get('/products/search', [ProductController::class, 'searchApi']);
 });
 
-// Auth Routes
+// Auth Routes (Real password verification & token creation)
 Route::post('/login', [AuthController::class, 'apiLogin']);
 Route::post('/register', [AuthController::class, 'apiRegister']);
-Route::get('/users', [AuthController::class, 'getAllUsers']);
-Route::post('/add-user', [AuthController::class, 'addUser']);
 
 // Category API Routes (Public - Read Only)
 Route::get('/categories', [CategoryController::class, 'indexApi'])->name('api.categories.index');
@@ -78,7 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/products/{id}', [ProductController::class, 'updateApi'])->name('api.products.update');
     Route::delete('/products/{id}', [ProductController::class, 'destroyApi'])->name('api.products.destroy');
 
-    // User Management API Routes
+    // User Management API Routes (Admin-only protected via controller)
+    Route::get('/users', [AuthController::class, 'getAllUsers']);
+    Route::post('/add-user', [AuthController::class, 'addUser']);
     Route::delete('/delete-user/{id}', [AuthController::class, 'deleteUser']);
     Route::put('/update-user/{id}', [AuthController::class, 'updateUser']);
 });

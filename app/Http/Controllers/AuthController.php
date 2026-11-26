@@ -145,93 +145,123 @@ class AuthController extends Controller
             'message' => 'Registration successful',
             'access_token' => $token,
             'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role ?? 'user',
+            ],
         ]);
     }
 
-    
+    public function getAllUsers(Request $request)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-    public function getAllUsers()
-{
-    // Select only the columns you want
-    $users = User::select('id', 'name', 'email', 'role', 'email_verified_at', 'created_at', 'updated_at')->get();
+        $users = User::select('id', 'name', 'email', 'role', 'email_verified_at', 'created_at', 'updated_at')->get();
 
-    return response()->json($users);
-}
+        return response()->json($users);
+    }
 
-public function addUser(Request $request)
-{
-    $validated = $request->validate([
-        'name' => 'required|string|max:255',
-        'email' => 'required|email|unique:users',
-        'password' => 'required|min:6',
-        'role' => 'sometimes|in:admin,user',
-    ]);
+    public function addUser(Request $request)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-    $user = \App\Models\User::create([
-        'name' => $validated['name'],
-        'email' => $validated['email'],
-        'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
-        'role' => $validated['role'] ?? 'user',
-    ]);
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|unique:users',
+            'password' => 'required|min:6',
+            'role' => 'sometimes|in:admin,cashier,kitchen,user',
+        ]);
 
-    return response()->json([
-        'message' => 'User added successfully',
-        'user' => $user,
-    ], 201);
-}
+        $user = \App\Models\User::create([
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => \Illuminate\Support\Facades\Hash::make($validated['password']),
+            'role' => $validated['role'] ?? 'user',
+        ]);
 
-
-
-public function deleteUser($id)
-{
-    $user = \App\Models\User::find($id);
-
-    if (!$user) {
         return response()->json([
-            'message' => 'User not found'
-        ], 404);
+            'message' => 'User added successfully',
+            'user' => $user,
+        ], 201);
     }
 
-    $user->delete();
+    public function deleteUser(Request $request, $id)
+    {
+        if (!$request->user() || !$request->user()->isAdmin()) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-    return response()->json([
-        'message' => 'User deleted successfully'
-    ]);
-}
+        $user = \App\Models\User::find($id);
 
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found'
+            ], 404);
+        }
 
-public function updateUser(Request $request, $id)
-{
-    $user = \App\Models\User::find($id);
+        if ((int) $request->user()->id === (int) $user->id) {
+            return response()->json(['message' => 'Cannot delete your own account'], 422);
+        }
 
-    if (!$user) {
+        $user->delete();
+
         return response()->json([
-            'message' => 'User not found'
-        ], 404);
+            'message' => 'User deleted successfully'
+        ]);
     }
 
-    $request->validate([
-        'name' => 'sometimes|required|string|max:255',
-        'email' => 'sometimes|required|email|unique:users,email,' . $id,
-        'password' => 'sometimes|required|min:6',
-        'role' => 'sometimes|in:admin,cashier,kitchen,user',
-    ]);
+    public function updateUser(Request $request, $id)
+    {
+        $authUser = $request->user();
+        if (!$authUser || (!$authUser->isAdmin() && (int) $authUser->id !== (int) $id)) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
 
-    $user->name = $request->name ?? $user->name;
-    $user->email = $request->email ?? $user->email;
-    $user->role = $request->role ?? $user->role;
+        $user = \App\Models\User::find($id);
 
-    if ($request->filled('password')) {
-        $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        if (!$user) {
+            return response()->json([
+                'message' => 'User not found'
+            ], 404);
+        }
+
+        $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'email' => 'sometimes|required|email|unique:users,email,' . $id,
+            'password' => 'sometimes|required|min:6',
+            'role' => 'sometimes|in:admin,cashier,kitchen,user',
+        ]);
+
+        $user->name = $request->name ?? $user->name;
+        $user->email = $request->email ?? $user->email;
+
+        // Only admins may change roles (prevents privilege escalation)
+        if ($authUser->isAdmin() && $request->filled('role')) {
+            $user->role = $request->role;
+        }
+
+        if ($request->filled('password')) {
+            $user->password = \Illuminate\Support\Facades\Hash::make($request->password);
+        }
+
+        $user->save();
+
+        return response()->json([
+            'message' => 'User updated successfully',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'role' => $user->role,
+            ]
+        ]);
     }
-
-    $user->save();
-
-    return response()->json([
-        'message' => 'User updated successfully',
-        'user' => $user
-    ]);
-}
 
     /**
      * Display User & Role Management list for Web Admin
