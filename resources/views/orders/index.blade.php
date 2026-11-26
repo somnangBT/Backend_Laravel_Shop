@@ -18,70 +18,58 @@
         </div>
 
         <div class="flex items-center gap-3 flex-wrap">
-            <span style="background:#064e3b; color:#6ee7b7; border:1px solid #059669;"
-                  class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm"
-                  title="ទំព័រនេះអាប់ដេតស្វ័យប្រវត្តិភ្លាមៗពេលភ្ញៀវទិញ">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>Live Auto-Update</span>
-            </span>
-
-            <a href="{{ route('reports.sales') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 transition-all">
+            <a href="{{ route('reports.sales') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 transition-colors">
                 <i class="fas fa-chart-line"></i>
                 <span>Sales Reports</span>
             </a>
         </div>
     </div>
 
-    <!-- Paid & Pending Admin Delivery Approval Alert -->
+    <!-- Pending Delivery Approval Alert -->
     @if(($counts['paid_pending_approval'] ?? 0) > 0)
-        <div class="mb-5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-teal-950/80 to-cyan-950/80 border border-emerald-500/40 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-lg">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 flex-shrink-0">
-                    <i class="fas fa-qrcode text-lg"></i>
+        <div class="mb-5 rounded-xl bg-gray-900 border border-gray-700 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+                <div class="text-sm font-semibold text-gray-100">
+                    មានការបញ្ជាទិញចំនួន {{ $counts['paid_pending_approval'] }} បានបង់ប្រាក់តាម KHQR / ភ្ជាប់វិក្កយបត្រ និងកំពុងរង់ចាំ Approve
                 </div>
-                <div>
-                    <div class="text-sm font-bold text-emerald-300">
-                        💳 មានការបញ្ជាទិញចំនួន {{ $counts['paid_pending_approval'] }} បានបង់ប្រាក់តាម KHQR / ភ្ជាប់វិក្កយបត្រ និងកំពុងរង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន!
-                    </div>
-                    <div class="text-xs text-gray-300 mt-0.5">
-                        សូមពិនិត្យលុយចូល Bakong ឬរូបវិក្កយបត្រ រួចចុចប៊ូតុង <strong class="text-white">«Approve & ដឹកជញ្ជូន»</strong>។
-                    </div>
+                <div class="text-xs text-gray-400 mt-0.5">
+                    សូមពិនិត្យការទូទាត់ រួចចុច Approve ដើម្បីដឹកជញ្ជូន។
                 </div>
             </div>
             <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}"
-               class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-gray-950 font-bold text-xs whitespace-nowrap transition-all shadow-md">
-                🔍 មើលបញ្ជីរង់ចាំ Approve ({{ $counts['paid_pending_approval'] }})
+               class="px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs whitespace-nowrap transition-colors">
+                មើលបញ្ជីរង់ចាំ ({{ $counts['paid_pending_approval'] }})
             </a>
         </div>
     @endif
 
-    <!-- Status Tabs / Filter Pills -->
+    <!-- Status Tabs -->
     <div id="orders-status-tabs" class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
-        <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ !request('status') && !request('payment_status') ? 'theme-bg-gradient text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            All Requests ({{ $counts['all'] }})
+        <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ !request('status') && !request('payment_status') ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            All Orders ({{ $counts['all'] }})
         </a>
-        <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('payment_status') === 'paid_pending_approval' ? 'bg-emerald-500 text-gray-950 shadow-md font-bold' : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 border border-emerald-700/50' }}">
-            💳 Already Paid / Verify ({{ $counts['paid_pending_approval'] ?? 0 }})
+        <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('payment_status') === 'paid_pending_approval' ? 'bg-emerald-700 text-white border border-emerald-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Waiting Approval ({{ $counts['paid_pending_approval'] ?? 0 }})
         </a>
-        <a href="{{ route('orders.index', ['status' => 'pending']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'pending' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            ⏳ Pending ({{ $counts['pending'] }})
+        <a href="{{ route('orders.index', ['status' => 'pending']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('status') === 'pending' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Pending ({{ $counts['pending'] }})
         </a>
-        <a href="{{ route('orders.index', ['status' => 'preparing']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'preparing' ? 'bg-amber-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            📦 Packing ({{ $counts['preparing'] }})
+        <a href="{{ route('orders.index', ['status' => 'preparing']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('status') === 'preparing' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Packing ({{ $counts['preparing'] }})
         </a>
-        <a href="{{ route('orders.index', ['status' => 'delivering']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'delivering' ? 'bg-cyan-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            🛵 Delivering ({{ $counts['delivering'] }})
+        <a href="{{ route('orders.index', ['status' => 'delivering']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('status') === 'delivering' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Delivering ({{ $counts['delivering'] }})
         </a>
-        <a href="{{ route('orders.index', ['status' => 'completed']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'completed' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            ✅ Completed ({{ $counts['completed'] }})
+        <a href="{{ route('orders.index', ['status' => 'completed']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('status') === 'completed' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Completed ({{ $counts['completed'] }})
         </a>
-        <a href="{{ route('orders.index', ['status' => 'cancelled']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'cancelled' ? 'bg-red-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            ❌ Cancelled ({{ $counts['cancelled'] }})
+        <a href="{{ route('orders.index', ['status' => 'cancelled']) }}" class="px-3.5 py-2 rounded-lg text-xs font-medium whitespace-nowrap transition-colors {{ request('status') === 'cancelled' ? 'bg-gray-700 text-white border border-gray-600' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
+            Cancelled ({{ $counts['cancelled'] }})
         </a>
     </div>
 
-    <!-- Search & Auto-Filters -->
-    <div class="bg-gray-900/80 rounded-2xl border border-gray-800 p-4 mb-6 shadow-xl">
+    <!-- Search & Filters -->
+    <div class="bg-gray-900/80 rounded-xl border border-gray-800 p-4 mb-6">
         <form action="{{ route('orders.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="hidden" name="status" value="{{ request('status', 'all') }}">
 
@@ -91,25 +79,24 @@
                         <i class="fas fa-search"></i>
                     </span>
                     <input type="text" name="search" value="{{ request('search') }}" autocomplete="off"
-                           placeholder="វាយស្វែងរក Order #, ឈ្មោះ, ទូរស័ព្ទ, Bakong ref... (Auto)" 
-                           class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 pl-9 pr-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                           placeholder="Search Order #, customer name, phone, ref..." 
+                           class="w-full bg-gray-950 border border-gray-800 rounded-lg py-2 pl-9 pr-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-600">
                 </div>
             </div>
 
             <div>
-                <select name="payment_status" class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 px-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer">
+                <select name="payment_status" class="w-full bg-gray-950 border border-gray-800 rounded-lg py-2 px-3 text-sm text-gray-200 focus:outline-none focus:ring-1 focus:ring-gray-600 cursor-pointer">
                     <option value="all">All Payment Statuses</option>
-                    <option value="paid_pending_approval" {{ request('payment_status') === 'paid_pending_approval' ? 'selected' : '' }}>💳 Paid & Waiting Approve</option>
-                    <option value="awaiting_approval" {{ request('payment_status') === 'awaiting_approval' ? 'selected' : '' }}>🧾 Slip Submitted (Verify)</option>
-                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>⏳ Payment Pending</option>
-                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>✅ Paid</option>
-                    <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>↩️ Refunded</option>
+                    <option value="paid_pending_approval" {{ request('payment_status') === 'paid_pending_approval' ? 'selected' : '' }}>Paid & Waiting Approve</option>
+                    <option value="awaiting_approval" {{ request('payment_status') === 'awaiting_approval' ? 'selected' : '' }}>Slip Submitted (Verify)</option>
+                    <option value="pending" {{ request('payment_status') === 'pending' ? 'selected' : '' }}>Payment Pending</option>
+                    <option value="paid" {{ request('payment_status') === 'paid' ? 'selected' : '' }}>Already Paid</option>
+                    <option value="refunded" {{ request('payment_status') === 'refunded' ? 'selected' : '' }}>Refunded</option>
                 </select>
             </div>
 
             <div class="flex items-center justify-end gap-2">
-                <a href="{{ route('orders.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl border border-gray-700 text-sm font-medium transition-colors" title="Reset Filters">
-                    <i class="fas fa-undo-alt text-xs"></i>
+                <a href="{{ route('orders.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg border border-gray-700 text-sm font-medium transition-colors" title="Reset Filters">
                     <span>Reset</span>
                 </a>
             </div>
@@ -189,37 +176,37 @@
                                 <div class="text-xs text-gray-400 mt-0.5">{{ $order->phone ?: 'No phone' }}</div>
                             </td>
 
-                            <!-- Essential Payment: Paid? • Via • When -->
+                            <!-- Essential Payment: Paid Status, Method, Time -->
                             <td class="py-3 px-4 text-center whitespace-nowrap">
                                 <div>
                                     @if($order->payment_status === 'paid')
-                                        <span style="background:#059669; color:#ffffff;" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                                            ✅ Already Paid
+                                        <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-medium bg-emerald-950 text-emerald-400 border border-emerald-800">
+                                            Already Paid
                                         </span>
                                     @elseif($order->payment_status === 'awaiting_approval')
-                                        <span style="background:#0284c7; color:#ffffff;" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                                            🧾 Verify Claim
+                                        <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-medium bg-cyan-950 text-cyan-400 border border-cyan-800">
+                                            Verify Claim
                                         </span>
                                     @elseif($order->payment_status === 'refunded')
-                                        <span style="background:#e11d48; color:#ffffff;" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                                            ↩️ Refunded
+                                        <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-medium bg-red-950 text-red-400 border border-red-800">
+                                            Refunded
                                         </span>
                                     @else
-                                        <span style="background:#d97706; color:#ffffff;" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-sm">
-                                            ⏳ Not Paid
+                                        <span class="inline-block px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-950 text-amber-400 border border-amber-800">
+                                            Not Paid
                                         </span>
                                     @endif
                                 </div>
-                                <div class="text-[11px] text-gray-400 mt-1">
+                                <div class="text-xs text-gray-400 mt-1">
                                     @if($order->payment_method === 'aba_khqr')
-                                        🏦 ABA
+                                        ABA KHQR
                                     @elseif(in_array($order->payment_method, ['khqr', 'bakong_aba']))
-                                        ⚡ Bakong
+                                        Bakong KHQR
                                     @else
-                                        💵 Cash
+                                        Cash
                                     @endif
                                     @if($displayWhen)
-                                        • {{ $displayWhen->format('d M, h:i A') }}
+                                        · {{ $displayWhen->format('d M, h:i A') }}
                                     @endif
                                 </div>
                             </td>
@@ -229,26 +216,26 @@
                                 <form action="{{ route('orders.update-status', $order->id) }}" method="POST" class="inline-block">
                                     @csrf
                                     <select name="status" onchange="this.form.submit()" 
-                                            class="text-xs font-semibold px-2.5 py-1 rounded-xl cursor-pointer focus:outline-none transition-colors border {{ 
+                                            class="text-xs font-medium px-2.5 py-1 rounded-lg cursor-pointer focus:outline-none transition-colors border {{ 
                                                 $order->status === 'completed' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' : 
                                                 ($order->status === 'delivering' ? 'bg-cyan-950 text-cyan-400 border-cyan-800' : 
                                                 ($order->status === 'preparing' ? 'bg-amber-950 text-amber-400 border-amber-800' : 
                                                 ($order->status === 'cancelled' ? 'bg-red-950 text-red-400 border-red-800' : 
-                                                'bg-indigo-950 text-indigo-400 border-indigo-800'))) 
+                                                'bg-gray-800 text-gray-300 border-gray-700'))) 
                                             }}">
-                                        <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>⏳ Pending</option>
-                                        <option value="preparing" {{ $order->status === 'preparing' ? 'selected' : '' }}>📦 Packing</option>
-                                        <option value="delivering" {{ $order->status === 'delivering' ? 'selected' : '' }}>🛵 Delivering</option>
-                                        <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>✅ Completed</option>
-                                        <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>❌ Cancelled</option>
+                                        <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>Pending</option>
+                                        <option value="preparing" {{ $order->status === 'preparing' ? 'selected' : '' }}>Packing</option>
+                                        <option value="delivering" {{ $order->status === 'delivering' ? 'selected' : '' }}>Delivering</option>
+                                        <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>Completed</option>
+                                        <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>Cancelled</option>
                                     </select>
                                 </form>
                             </td>
 
                             <!-- Total & Item Count -->
                             <td class="py-3 px-4 text-right whitespace-nowrap">
-                                <div class="font-mono font-bold text-white">${{ number_format($order->total, 2) }}</div>
-                                <div class="text-[11px] text-gray-400">{{ $itemCount }} {{ $itemCount === 1 ? 'item' : 'items' }}</div>
+                                <div class="font-mono font-semibold text-white">${{ number_format($order->total, 2) }}</div>
+                                <div class="text-xs text-gray-400">{{ $itemCount }} {{ $itemCount === 1 ? 'item' : 'items' }}</div>
                             </td>
 
                             <!-- Actions: Detail Button + Quick Approve -->
@@ -256,21 +243,17 @@
                                 <div class="flex items-center justify-center gap-1.5">
                                     <button type="button"
                                             onclick="openOrderDetail({{ $order->id }})"
-                                            style="background:#2563eb; color:#ffffff;"
-                                            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:opacity-90 text-xs font-bold shadow-sm transition-all cursor-pointer">
-                                        <i class="fas fa-eye"></i>
-                                        <span>Detail</span>
+                                            class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 text-xs font-medium transition-colors cursor-pointer">
+                                        Detail
                                     </button>
                                     @if($order->status === 'pending')
                                         <form action="{{ route('orders.approve', $order->id) }}" method="POST" class="inline">
                                             @csrf
                                             <button type="submit"
                                                     onclick="return confirm('អនុម័ត និងបញ្ជូន Order #{{ $order->id }} ទៅដឹកជញ្ជូន?')"
-                                                    style="background:#059669; color:#ffffff;"
-                                                    class="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg hover:opacity-90 text-xs font-bold shadow-sm transition-all cursor-pointer"
+                                                    class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors cursor-pointer"
                                                     title="Approve & Deliver">
-                                                <i class="fas fa-check"></i>
-                                                <span>Approve</span>
+                                                Approve
                                             </button>
                                         </form>
                                     @endif
@@ -303,78 +286,78 @@
 </div>
 
 <!-- Order Full Detail Modal -->
-<div id="orderDetailModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/80 p-4 overflow-y-auto" onclick="closeOrderDetail()">
+<div id="orderDetailModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 p-4 overflow-y-auto" onclick="closeOrderDetail()">
     <div id="orderDetailCard"
-         style="background-color:#0f172a; color:#f8fafc; border:1px solid #334155;"
-         class="rounded-2xl max-w-2xl w-full p-5 sm:p-6 shadow-2xl my-auto max-h-[92vh] overflow-y-auto"
+         style="background-color:#111827; color:#f3f4f6; border:1px solid #374151;"
+         class="rounded-xl max-w-2xl w-full p-5 sm:p-6 shadow-xl my-auto max-h-[92vh] overflow-y-auto"
          onclick="event.stopPropagation()">
-        <div class="flex items-start justify-between gap-4 pb-4" style="border-bottom:1px solid #1e293b;">
+        <div class="flex items-start justify-between gap-4 pb-4" style="border-bottom:1px solid #1f2937;">
             <div>
                 <div class="flex items-center gap-2.5 flex-wrap">
-                    <h3 id="detailOrderTitle" class="text-xl font-bold" style="color:#ffffff;">Order #</h3>
-                    <span id="detailPaidBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"></span>
+                    <h3 id="detailOrderTitle" class="text-lg font-semibold" style="color:#ffffff;">Order #</h3>
+                    <span id="detailPaidBadge" class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium"></span>
                 </div>
-                <p id="detailOrderTime" class="text-xs mt-1" style="color:#94a3b8;"></p>
+                <p id="detailOrderTime" class="text-xs mt-1" style="color:#9ca3af;"></p>
             </div>
-            <button type="button" onclick="closeOrderDetail()" class="text-xl px-2 py-0.5 rounded-lg" style="color:#94a3b8;">&times;</button>
+            <button type="button" onclick="closeOrderDetail()" class="text-xl px-2 py-0.5 rounded-lg" style="color:#9ca3af;">&times;</button>
         </div>
 
         <!-- Customer & Payment Summary Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
-            <div class="rounded-xl p-3.5" style="background-color:#1e293b; border:1px solid #334155;">
-                <div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:#38bdf8;">👤 Customer & Delivery</div>
-                <div id="detailCustomerBody" class="space-y-1.5 text-xs" style="color:#e2e8f0;"></div>
+            <div class="rounded-lg p-3.5" style="background-color:#1f2937; border:1px solid #374151;">
+                <div class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#9ca3af;">Customer & Delivery</div>
+                <div id="detailCustomerBody" class="space-y-1.5 text-xs" style="color:#e5e7eb;"></div>
             </div>
 
-            <div class="rounded-xl p-3.5" style="background-color:#1e293b; border:1px solid #334155;">
-                <div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:#34d399;">💳 Payment Info</div>
-                <div id="detailPaymentBody" class="space-y-1.5 text-xs" style="color:#e2e8f0;"></div>
+            <div class="rounded-lg p-3.5" style="background-color:#1f2937; border:1px solid #374151;">
+                <div class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#9ca3af;">Payment Information</div>
+                <div id="detailPaymentBody" class="space-y-1.5 text-xs" style="color:#e5e7eb;"></div>
 
                 <form id="detailPaymentForm" method="POST" class="mt-3 flex items-center gap-2">
                     @csrf
                     <select id="detailPaymentSelect" name="payment_status"
-                            style="background-color:#0f172a; color:#f8fafc; border:1px solid #475569;"
-                            class="text-xs font-semibold px-2.5 py-1.5 rounded-lg flex-1">
-                        <option value="pending">⏳ Not Paid Yet</option>
-                        <option value="awaiting_approval">🧾 Verify Claim</option>
-                        <option value="paid">✅ Already Paid</option>
-                        <option value="refunded">↩️ Refunded</option>
+                            style="background-color:#111827; color:#f3f4f6; border:1px solid #4b5563;"
+                            class="text-xs font-medium px-2.5 py-1.5 rounded-lg flex-1">
+                        <option value="pending">Not Paid</option>
+                        <option value="awaiting_approval">Verify Claim</option>
+                        <option value="paid">Already Paid</option>
+                        <option value="refunded">Refunded</option>
                     </select>
-                    <button type="submit" style="background:#0284c7; color:#ffffff;" class="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
+                    <button type="submit" style="background:#374151; color:#ffffff; border:1px solid #4b5563;" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
                         Save
                     </button>
                 </form>
 
                 <div id="detailSlipBox" class="hidden mt-3">
-                    <button type="button" id="detailSlipBtn" style="background:#4338ca; color:#ffffff;"
-                            class="w-full px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
-                        🧾 View Payment Slip Image
+                    <button type="button" id="detailSlipBtn" style="background:#374151; color:#ffffff; border:1px solid #4b5563;"
+                            class="w-full px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
+                        View Payment Slip
                     </button>
                 </div>
             </div>
         </div>
 
         <!-- Items Ordered Table -->
-        <div class="rounded-xl p-3.5 mb-4" style="background-color:#1e293b; border:1px solid #334155;">
-            <div class="text-xs font-bold uppercase tracking-wider mb-2" style="color:#fbbf24;">📦 Items Ordered</div>
-            <div id="detailItemsList" class="divide-y divide-slate-700/70 text-xs"></div>
-            <div id="detailTotalsBox" class="mt-3 pt-2.5 space-y-1 text-xs" style="border-top:1px solid #334155;"></div>
+        <div class="rounded-lg p-3.5 mb-4" style="background-color:#1f2937; border:1px solid #374151;">
+            <div class="text-xs font-semibold uppercase tracking-wider mb-2" style="color:#9ca3af;">Items Ordered</div>
+            <div id="detailItemsList" class="divide-y divide-gray-700 text-xs"></div>
+            <div id="detailTotalsBox" class="mt-3 pt-2.5 space-y-1 text-xs" style="border-top:1px solid #374151;"></div>
         </div>
 
         <!-- Footer Controls -->
-        <div class="flex flex-wrap items-center justify-between gap-3 pt-3" style="border-top:1px solid #1e293b;">
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-3" style="border-top:1px solid #1f2937;">
             <form id="detailStatusForm" method="POST" class="flex items-center gap-2">
                 @csrf
                 <select id="detailStatusSelect" name="status"
-                        style="background-color:#1e293b; color:#f8fafc; border:1px solid #475569;"
-                        class="text-xs font-semibold px-2.5 py-1.5 rounded-lg">
-                    <option value="pending">⏳ Pending</option>
-                    <option value="preparing">📦 Packing</option>
-                    <option value="delivering">🛵 Delivering</option>
-                    <option value="completed">✅ Completed</option>
-                    <option value="cancelled">❌ Cancelled</option>
+                        style="background-color:#1f2937; color:#f3f4f6; border:1px solid #4b5563;"
+                        class="text-xs font-medium px-2.5 py-1.5 rounded-lg">
+                    <option value="pending">Pending</option>
+                    <option value="preparing">Packing</option>
+                    <option value="delivering">Delivering</option>
+                    <option value="completed">Completed</option>
+                    <option value="cancelled">Cancelled</option>
                 </select>
-                <button type="submit" style="background:#334155; color:#ffffff;" class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
+                <button type="submit" style="background:#374151; color:#ffffff;" class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
                     Update Status
                 </button>
             </form>
@@ -385,18 +368,18 @@
                     <button type="submit"
                             onclick="return confirm('អនុម័តការបង់ប្រាក់ និងបញ្ជូន Order នេះទៅដឹកជញ្ជូន?')"
                             style="background:#059669; color:#ffffff;"
-                            class="px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer">
-                        ✅ Approve & ដឹក
+                            class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
+                        Approve
                     </button>
                 </form>
                 <button type="button" id="detailPrintBtn"
-                        style="background:#334155; color:#ffffff;"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
-                    🖨 Print Receipt
+                        style="background:#374151; color:#ffffff;"
+                        class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
+                    Print Receipt
                 </button>
                 <button type="button" onclick="closeOrderDetail()"
-                        style="background:#1e293b; color:#cbd5e1; border:1px solid #475569;"
-                        class="px-3 py-1.5 rounded-lg text-xs font-semibold cursor-pointer">
+                        style="background:#1f2937; color:#d1d5db; border:1px solid #4b5563;"
+                        class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
                     Close
                 </button>
             </div>
@@ -406,20 +389,20 @@
 
 <!-- Payment Slip Modal -->
 <div id="slipModal" class="fixed inset-0 z-[60] hidden items-center justify-center bg-black/80 p-4" onclick="closeSlipModal()">
-    <div class="bg-gray-900 border border-gray-700 rounded-2xl max-w-md w-full p-4 shadow-2xl" onclick="event.stopPropagation()">
+    <div class="bg-gray-900 border border-gray-700 rounded-xl max-w-md w-full p-4 shadow-xl" onclick="event.stopPropagation()">
         <div class="flex items-center justify-between mb-3">
-            <h3 id="slipModalTitle" class="text-white font-bold text-base">🧾 វិក្កយបត្របង់ប្រាក់</h3>
+            <h3 id="slipModalTitle" class="text-white font-semibold text-base">Payment Slip</h3>
             <button type="button" onclick="closeSlipModal()" class="text-gray-400 hover:text-white text-lg px-2">&times;</button>
         </div>
-        <div class="bg-black rounded-xl overflow-hidden flex items-center justify-center max-h-[70vh]">
+        <div class="bg-black rounded-lg overflow-hidden flex items-center justify-center max-h-[70vh]">
             <img id="slipModalImg" src="" alt="Payment Slip" class="max-h-[70vh] w-auto object-contain">
         </div>
         <div class="mt-3 flex justify-end gap-2">
-            <a id="slipModalLink" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold">
-                បើករូបភាពពេញ ↗
+            <a id="slipModalLink" href="#" target="_blank" class="px-3 py-1.5 rounded-lg bg-gray-700 hover:bg-gray-600 text-white text-xs font-medium">
+                Open Full Image
             </a>
-            <button type="button" onclick="closeSlipModal()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-semibold">
-                បិទ
+            <button type="button" onclick="closeSlipModal()" class="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-xs font-medium">
+                Close
             </button>
         </div>
     </div>
@@ -453,21 +436,25 @@ function openOrderDetail(orderId) {
 
     const paidBadge = document.getElementById('detailPaidBadge');
     if (order.payment_status === 'paid') {
-        paidBadge.textContent = '✅ Already Paid';
-        paidBadge.style.background = '#059669';
-        paidBadge.style.color = '#ffffff';
+        paidBadge.textContent = 'Already Paid';
+        paidBadge.style.background = '#064e3b';
+        paidBadge.style.color = '#6ee7b7';
+        paidBadge.style.border = '1px solid #047857';
     } else if (order.payment_status === 'awaiting_approval') {
-        paidBadge.textContent = '🧾 Verify Claim';
-        paidBadge.style.background = '#0284c7';
-        paidBadge.style.color = '#ffffff';
+        paidBadge.textContent = 'Verify Claim';
+        paidBadge.style.background = '#0c4a6e';
+        paidBadge.style.color = '#7dd3fc';
+        paidBadge.style.border = '1px solid #0369a1';
     } else if (order.payment_status === 'refunded') {
-        paidBadge.textContent = '↩️ Refunded';
-        paidBadge.style.background = '#e11d48';
-        paidBadge.style.color = '#ffffff';
+        paidBadge.textContent = 'Refunded';
+        paidBadge.style.background = '#450a0a';
+        paidBadge.style.color = '#fca5a5';
+        paidBadge.style.border = '1px solid #991b1b';
     } else {
-        paidBadge.textContent = '⏳ Not Paid Yet';
-        paidBadge.style.background = '#d97706';
-        paidBadge.style.color = '#ffffff';
+        paidBadge.textContent = 'Not Paid';
+        paidBadge.style.background = '#451a03';
+        paidBadge.style.color = '#fcd34d';
+        paidBadge.style.border = '1px solid #92400e';
     }
 
     document.getElementById('detailCustomerBody').innerHTML =
@@ -477,15 +464,15 @@ function openOrderDetail(orderId) {
         '<div><strong>Address:</strong> ' + escapeHtml(order.shipping_address) + '</div>' +
         (order.notes ? '<div><strong>Notes:</strong> ' + escapeHtml(order.notes) + '</div>' : '');
 
-    let viaLabel = '💵 Cash (COD)';
-    if (order.payment_method === 'aba_khqr') viaLabel = '🏦 ABA KHQR';
-    else if (order.payment_method === 'khqr' || order.payment_method === 'bakong_aba') viaLabel = '⚡ Bakong KHQR';
+    let viaLabel = 'Cash (COD)';
+    if (order.payment_method === 'aba_khqr') viaLabel = 'ABA KHQR';
+    else if (order.payment_method === 'khqr' || order.payment_method === 'bakong_aba') viaLabel = 'Bakong KHQR';
 
     document.getElementById('detailPaymentBody').innerHTML =
         '<div><strong>Via Channel:</strong> ' + escapeHtml(viaLabel) + '</div>' +
         '<div><strong>Time:</strong> ' + escapeHtml(order.payment_kh) + '</div>' +
         (order.bakong_ref ? '<div><strong>Ref / Sender:</strong> <span class="font-mono" style="color:#6ee7b7;">' + escapeHtml(order.bakong_ref) + '</span></div>' : '') +
-        (order.khqr_md5 ? '<div><strong>KHQR MD5:</strong> <span class="font-mono text-[11px]" style="color:#94a3b8;">' + escapeHtml(order.khqr_md5) + '</span></div>' : '');
+        (order.khqr_md5 ? '<div><strong>KHQR MD5:</strong> <span class="font-mono text-[11px]" style="color:#9ca3af;">' + escapeHtml(order.khqr_md5) + '</span></div>' : '');
 
     document.getElementById('detailPaymentForm').action = order.update_url;
     document.getElementById('detailPaymentSelect').value = order.payment_status || 'pending';
@@ -543,7 +530,7 @@ function closeOrderDetail() {
 }
 
 function openSlipModal(url, orderId) {
-    document.getElementById('slipModalTitle').textContent = '🧾 វិក្កយបត្របង់ប្រាក់ — Order #' + orderId;
+    document.getElementById('slipModalTitle').textContent = 'Payment Slip - Order #' + orderId;
     document.getElementById('slipModalImg').src = url;
     document.getElementById('slipModalLink').href = url;
     const modal = document.getElementById('slipModal');

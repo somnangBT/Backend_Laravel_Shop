@@ -1202,30 +1202,30 @@
             function showOrderToast(order, isPaidAlert) {
                 if (!order) return;
                 const card = document.createElement('div');
-                card.style.cssText = 'pointer-events:auto;background:#0f172a;color:#f8fafc;border:2px solid ' + (isPaidAlert || order.payment_status === 'paid' ? '#10b981' : '#38bdf8') + ';border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,0.45);font-family:Inter,sans-serif;transition:all 0.25s ease;';
+                card.style.cssText = 'pointer-events:auto;background:#1f2937;color:#f3f4f6;border:1px solid #374151;border-radius:10px;padding:12px 14px;box-shadow:0 10px 25px rgba(0,0,0,0.35);font-family:Inter,sans-serif;transition:all 0.2s ease;';
 
                 const viaText = order.payment_method === 'aba_khqr'
-                    ? '🏦 ABA KHQR'
-                    : (['khqr', 'bakong_aba'].includes(order.payment_method) ? '⚡ Bakong KHQR' : '💵 Cash COD');
+                    ? 'ABA KHQR'
+                    : (['khqr', 'bakong_aba'].includes(order.payment_method) ? 'Bakong KHQR' : 'Cash');
                 const paidText = order.payment_status === 'paid'
-                    ? '✅ Already Paid'
-                    : (order.payment_status === 'awaiting_approval' ? '🧾 Paid Claimed' : '⏳ Not Paid');
+                    ? 'Paid'
+                    : (order.payment_status === 'awaiting_approval' ? 'Verify Claim' : 'Not Paid');
 
                 card.innerHTML =
                     '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
-                        '<div style="font-weight:800;font-size:13px;color:' + (order.payment_status === 'paid' ? '#34d399' : '#38bdf8') + ';">' +
-                            (isPaidAlert ? '💳 ភ្ញៀវទើបបង់ប្រាក់!' : '🎉 មានការបញ្ជាទិញថ្មី!') + ' Request #' + escapeNoticeHtml(order.id) +
+                        '<div style="font-weight:600;font-size:13px;color:#ffffff;">' +
+                            (isPaidAlert ? 'Payment Received' : 'New Order') + ' #' + escapeNoticeHtml(order.id) +
                         '</div>' +
-                        '<button type="button" style="background:none;border:none;color:#94a3b8;font-size:16px;line-height:1;cursor:pointer;">&times;</button>' +
+                        '<button type="button" style="background:none;border:none;color:#9ca3af;font-size:16px;line-height:1;cursor:pointer;">&times;</button>' +
                     '</div>' +
-                    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;">' +
-                        '👤 <strong>' + escapeNoticeHtml(order.customer_name) + '</strong> • <strong style="color:#fbbf24;">$' + escapeNoticeHtml(order.total) + '</strong>' +
+                    '<div style="font-size:12px;color:#d1d5db;margin-top:4px;">' +
+                        escapeNoticeHtml(order.customer_name) + ' · $' + escapeNoticeHtml(order.total) +
                     '</div>' +
-                    '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">' +
-                        viaText + ' • ' + paidText + (order.time ? ' • 🕒 ' + escapeNoticeHtml(order.time) : '') +
+                    '<div style="font-size:11px;color:#9ca3af;margin-top:2px;">' +
+                        viaText + ' · ' + paidText + (order.time ? ' · ' + escapeNoticeHtml(order.time) : '') +
                     '</div>' +
-                    '<div style="margin-top:10px;display:flex;gap:8px;">' +
-                        '<button type="button" class="toast-view-btn" style="flex:1;background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">👁 មើលភ្លាម ➔</button>' +
+                    '<div style="margin-top:8px;">' +
+                        '<button type="button" class="toast-view-btn" style="background:#374151;color:#f9fafb;border:1px solid #4b5563;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:500;cursor:pointer;">View Order</button>' +
                     '</div>';
 
                 const closeBtn = card.querySelector('button');
