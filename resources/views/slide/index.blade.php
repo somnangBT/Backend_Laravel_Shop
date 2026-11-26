@@ -31,26 +31,21 @@
                             type="text" 
                             name="search" 
                             value="{{ request('search') }}" 
-                            placeholder="Search by main title"
+                            autocomplete="off"
+                            placeholder="វាយស្វែងរកចំណងជើង Slide... (Auto Search)"
                             class="bg-gray-900/70 text-gray-100 border border-gray-700/50 rounded-lg w-full py-2.5 pl-10 pr-4 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent transition-all duration-200"
                         >
                     </div>
                     <div class="flex gap-3">
-                        <button 
-                            type="submit" 
-                            class="bg-cyan-600 hover:bg-cyan-700 text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 shadow-lg shadow-cyan-900/20 flex-shrink-0"
-                        >
-                            Search
-                        </button>
-                        @if (request('search'))
-                            <a href="{{ route('slide-heroes.index') }}" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 flex-shrink-0">
-                                Clear
-                            </a>
-                        @endif
+                        <a href="{{ route('slide-heroes.index') }}" class="bg-gray-700 hover:bg-gray-600 text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 flex-shrink-0">
+                            Reset
+                        </a>
                     </div>
                 </div>
             </form>
         </div>
+
+        <div data-live-region="slides">
 
         <!-- Notifications -->
         @if (session('success'))
@@ -158,6 +153,7 @@
         <!-- Pagination -->
         <div class="flex justify-center">
             {{ $slides->links('vendor.pagination.tailwind') }}
+        </div>
         </div>
     </div>
 </div>

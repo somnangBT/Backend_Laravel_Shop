@@ -5,16 +5,16 @@
     <h1 class="text-2xl font-bold mb-6">Search Categories</h1>
 
     <div class="mb-4">
-        <form action="{{ route('categories.search') }}" method="GET" class="flex max-w-md">
-            <input type="text" name="search" placeholder="Search by category name..." value="{{ $search ?? '' }}"
+        <form action="{{ route('categories.search') }}" method="GET" class="flex max-w-md gap-2">
+            <input type="text" name="search" placeholder="វាយស្វែងរកឈ្មោះប្រភេទទំនិញ... (Auto Search)" value="{{ $search ?? '' }}" autocomplete="off"
                    class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline">
-            <button type="submit" class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-2">
-                Search
-            </button>
+            <a href="{{ route('categories.search') }}" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+                Reset
+            </a>
         </form>
     </div>
 
-    <div class="bg-white shadow-md rounded my-6">
+    <div data-live-region="categories" class="bg-white shadow-md rounded my-6">
         <table class="min-w-full border">
             <thead>
                 <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">

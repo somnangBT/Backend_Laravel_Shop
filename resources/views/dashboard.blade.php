@@ -190,7 +190,8 @@
                         type="text" 
                         name="product_search" 
                         value="{{ request('product_search') }}" 
-                        placeholder="Search products..." 
+                        autocomplete="off"
+                        placeholder="វាយស្វែងរកទំនិញ... (Auto Search)" 
                         class="bg-gray-900/70 border border-gray-700/50 rounded-lg py-2 pl-10 pr-4 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500/50 focus:border-transparent text-sm"
                     >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 absolute left-3 top-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -213,6 +214,7 @@
             </form>
         </div>
         
+        <div data-live-region="dashboard-products">
         <div class="overflow-x-auto">
             <table class="w-full">
                 <thead>
@@ -342,6 +344,7 @@
                 <span>Showing all <strong class="text-gray-300">{{ $products->total() }}</strong> products</span>
             </div>
         @endif
+        </div>
     </div>
 
     <!-- Customers and Their Orders -->

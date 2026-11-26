@@ -73,7 +73,7 @@
         </a>
     </div>
 
-    <!-- Search & Filters -->
+    <!-- Search & Auto-Filters -->
     <div class="bg-gray-900/80 rounded-2xl border border-gray-800 p-4 mb-6 shadow-xl">
         <form action="{{ route('orders.index') }}" method="GET" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <input type="hidden" name="status" value="{{ request('status', 'all') }}">
@@ -83,13 +83,14 @@
                     <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-500">
                         <i class="fas fa-search"></i>
                     </span>
-                    <input type="text" name="search" value="{{ request('search') }}" placeholder="Search by Order ID, customer name, email, phone, Bakong ref..." 
+                    <input type="text" name="search" value="{{ request('search') }}" autocomplete="off"
+                           placeholder="វាយស្វែងរក Order #, ឈ្មោះ, ទូរស័ព្ទ, Bakong ref... (Auto)" 
                            class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 pl-9 pr-4 text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-cyan-500">
                 </div>
             </div>
 
             <div>
-                <select name="payment_status" class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 px-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500">
+                <select name="payment_status" class="w-full bg-gray-950 border border-gray-800 rounded-xl py-2 px-3 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500 cursor-pointer">
                     <option value="all">All Payment Statuses</option>
                     <option value="paid_pending_approval" {{ request('payment_status') === 'paid_pending_approval' ? 'selected' : '' }}>💳 Paid & Waiting Approve</option>
                     <option value="awaiting_approval" {{ request('payment_status') === 'awaiting_approval' ? 'selected' : '' }}>🧾 Slip Submitted (Verify)</option>
@@ -99,21 +100,17 @@
                 </select>
             </div>
 
-            <div class="flex items-center gap-2">
-                <button type="submit" class="flex-1 theme-bg-gradient hover:opacity-90 text-white font-semibold py-2 px-4 rounded-xl text-sm transition-all shadow-md">
-                    Filter
-                </button>
-                @if(request()->hasAny(['search', 'payment_status']) || request('status') !== 'all')
-                    <a href="{{ route('orders.index') }}" class="p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl border border-gray-700 transition-colors" title="Clear">
-                        <i class="fas fa-times"></i>
-                    </a>
-                @endif
+            <div class="flex items-center justify-end gap-2">
+                <a href="{{ route('orders.index') }}" class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl border border-gray-700 text-sm font-medium transition-colors" title="Reset Filters">
+                    <i class="fas fa-undo-alt text-xs"></i>
+                    <span>Reset</span>
+                </a>
             </div>
         </form>
     </div>
 
     <!-- Orders Table (Clean Essential View + Detail Modal) -->
-    <div class="bg-gray-900/80 rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
+    <div data-live-region="orders-table" class="bg-gray-900/80 rounded-2xl border border-gray-800 overflow-hidden shadow-2xl">
         <div class="overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
@@ -293,6 +290,7 @@
                 {{ $orders->links() }}
             </div>
         @endif
+        <script type="application/json" id="orders-map-json">@json($ordersMap)</script>
     </div>
 
 </div>

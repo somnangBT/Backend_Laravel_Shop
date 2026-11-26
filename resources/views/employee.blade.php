@@ -64,15 +64,6 @@
 
             <!-- Action Buttons -->
             <div class="flex gap-4">
-                <button 
-                    type="submit"
-                    class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-3 rounded-xl transition duration-300 flex items-center"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    Filter
-                </button>
                 <a 
                     href="{{ route('employees.index') }}"
                     class="bg-gray-700 hover:bg-gray-600 text-white px-4 py-3 rounded-xl transition duration-300 flex items-center"
@@ -88,7 +79,7 @@
 </div>
 
         <!-- Employee Table (Dark Mode) -->
-        <div class="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden" data-aos="fade-up" data-aos-delay="400">
+        <div data-live-region="employees" class="bg-gray-800 rounded-2xl shadow-xl border border-gray-700 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-700">
                     <thead>
@@ -180,36 +171,7 @@
         </div>
 
         <script>
-             document.addEventListener('DOMContentLoaded', function() {
-        // Live search with debounce
-        const searchInput = document.getElementById('searchInput');
-        const form = document.getElementById('searchForm');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        let timer;
-    
-        searchInput.addEventListener('input', function() {
-            loadingIndicator.classList.remove('hidden');
-            clearTimeout(timer);
-            timer = setTimeout(() => {
-                form.submit();
-            }, 500);
-        });
-    
-        // Prevent form submission on Enter key to allow live search
-        searchInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                form.submit();
-            }
-        });
-    
-        // Hide loading when form submits (for browsers that don't replace the page)
-        form.addEventListener('submit', function() {
-            loadingIndicator.classList.remove('hidden');
-        });
-    });
-    
-    // Sorting function
+    // Sorting function (Handled by global live filter for search/selects)
     function sortTable(field) {
         const url = new URL(window.location.href);
         const sort = url.searchParams.get('sort');

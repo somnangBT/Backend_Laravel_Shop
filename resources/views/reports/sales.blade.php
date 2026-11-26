@@ -146,24 +146,22 @@
                     <!-- Search Input -->
                     <div class="lg:col-span-1">
                         <label class="block text-xs font-medium text-gray-400 mb-1">Search</label>
-                        <input type="text" name="search" value="{{ $summary['search'] }}" placeholder="Order #, name..."
+                        <input type="text" name="search" value="{{ $summary['search'] }}" autocomplete="off" placeholder="Order #, name... (Auto)"
                                class="w-full bg-gray-950 border border-gray-700/80 rounded-xl px-3 py-2 text-sm text-gray-200 focus:outline-none focus:ring-2 focus:ring-cyan-500">
                     </div>
 
-                    <!-- Filter & Reset Buttons -->
+                    <!-- Reset Button -->
                     <div class="lg:col-span-1 flex items-end gap-2">
-                        <button type="submit" class="flex-1 theme-bg-gradient hover:opacity-90 text-white font-semibold py-2 px-3 rounded-xl text-sm transition-all duration-200 flex items-center justify-center gap-1.5 shadow-md">
-                            <i class="fas fa-filter text-xs"></i>
-                            <span>Filter</span>
-                        </button>
-                        <a href="{{ route('reports.sales') }}" class="p-2 bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-white rounded-xl border border-gray-700 transition-colors" title="Reset Filters">
-                            <i class="fas fa-undo-alt text-sm"></i>
+                        <a href="{{ route('reports.sales') }}" class="w-full inline-flex items-center justify-center gap-1.5 py-2 px-3 bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white rounded-xl border border-gray-700 text-sm transition-colors" title="Reset Filters">
+                            <i class="fas fa-undo-alt text-xs"></i>
+                            <span>Reset</span>
                         </a>
                     </div>
                 </div>
             </form>
         </div>
 
+        <div data-live-region="sales-results" class="space-y-6">
         <!-- KPI Summary Cards Grid -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             
@@ -475,6 +473,7 @@
                 </div>
             @endif
         </div>
+        </div>
 
     </div>
 </div>
@@ -491,7 +490,8 @@
             }
         });
 
-        document.getElementById('salesFilterForm').submit();
+        const form = document.getElementById('salesFilterForm');
+        if (form.requestSubmit) form.requestSubmit(); else form.submit();
     }
 </script>
 @endsection

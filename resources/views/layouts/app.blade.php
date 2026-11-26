@@ -825,7 +825,7 @@
             </header>
             
             <!-- Page Content -->
-            <main class="p-6 bg-gray-950 min-h-[calc(100vh-8rem)]">
+            <main id="admin-main-content" class="p-6 bg-gray-950 min-h-[calc(100vh-8rem)]">
                 @yield('content')
             </main>
             
@@ -976,6 +976,135 @@
                 }
             }
         }
+
+        // Global Auto-Search & Auto-Filter for all GET forms (no Filter button clicks needed)
+        (function() {
+            const mainEl = document.getElementById('admin-main-content');
+            if (!mainEl) return;
+
+            let debounceTimer = null;
+            let activeController = null;
+
+            function buildFormUrl(form) {
+                const action = form.getAttribute('action') || window.location.pathname;
+                const url = new URL(action, window.location.origin);
+                const formData = new FormData(form);
+                formData.forEach((value, key) => {
+                    const str = String(value ?? '').trim();
+                    if (str !== '') {
+                        url.searchParams.set(key, String(value));
+                    } else {
+                        url.searchParams.delete(key);
+                    }
+                });
+                return url.toString();
+            }
+
+            function syncJsonPayloads(doc) {
+                const ordersJsonEl = doc.getElementById('orders-map-json');
+                if (ordersJsonEl) {
+                    try {
+                        window.__ORDERS_MAP = JSON.parse(ordersJsonEl.textContent);
+                    } catch (_) {}
+                }
+            }
+
+            async function performLiveFilter(form, triggerInput) {
+                if (activeController) activeController.abort();
+                activeController = new AbortController();
+
+                const url = buildFormUrl(form);
+                const triggerName = triggerInput && triggerInput.name ? triggerInput.name : null;
+                const triggerValue = triggerInput && typeof triggerInput.value === 'string' ? triggerInput.value : null;
+
+                window.history.replaceState({}, '', url);
+
+                const liveRegions = mainEl.querySelectorAll('[data-live-region]');
+                liveRegions.forEach((el) => {
+                    el.style.transition = 'opacity 150ms';
+                    el.style.opacity = '0.55';
+                });
+
+                try {
+                    const res = await fetch(url, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                        signal: activeController.signal
+                    });
+                    if (!res.ok) throw new Error('Network error');
+                    const html = await res.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                    // If user continued typing while request was in flight, let the newer request update DOM
+                    if (triggerName && triggerInput === document.activeElement && triggerInput.value !== triggerValue) {
+                        return;
+                    }
+
+                    syncJsonPayloads(doc);
+
+                    const incomingRegions = doc.querySelectorAll('[data-live-region]');
+                    if (liveRegions.length > 0 && incomingRegions.length === liveRegions.length) {
+                        liveRegions.forEach((currentEl, idx) => {
+                            currentEl.innerHTML = incomingRegions[idx].innerHTML;
+                            currentEl.style.opacity = '1';
+                        });
+                        return;
+                    }
+
+                    const newMain = doc.getElementById('admin-main-content');
+                    if (newMain && !newMain.querySelector('canvas')) {
+                        const selStart = triggerInput && typeof triggerInput.selectionStart === 'number' ? triggerInput.selectionStart : null;
+                        const selEnd = triggerInput && typeof triggerInput.selectionEnd === 'number' ? triggerInput.selectionEnd : null;
+                        mainEl.innerHTML = newMain.innerHTML;
+                        if (triggerName) {
+                            const restored = mainEl.querySelector(`form [name="${CSS.escape(triggerName)}"]`);
+                            if (restored) {
+                                restored.focus({ preventScroll: true });
+                                if (selStart !== null && typeof restored.setSelectionRange === 'function') {
+                                    restored.setSelectionRange(selStart, selEnd);
+                                }
+                            }
+                        }
+                    } else if (newMain) {
+                        window.location.href = url;
+                    }
+                } catch (err) {
+                    if (err.name !== 'AbortError') {
+                        liveRegions.forEach((el) => { el.style.opacity = '1'; });
+                    }
+                }
+            }
+
+            mainEl.addEventListener('input', (e) => {
+                const target = e.target;
+                const form = target && target.closest ? target.closest('form') : null;
+                if (!form) return;
+                if ((form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+                if (target.tagName === 'SELECT' || ['date', 'month', 'checkbox', 'radio'].includes(target.type)) return;
+
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => performLiveFilter(form, target), 250);
+            });
+
+            mainEl.addEventListener('change', (e) => {
+                const target = e.target;
+                const form = target && target.closest ? target.closest('form') : null;
+                if (!form) return;
+                if ((form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+                if (target.tagName === 'SELECT' || ['date', 'month', 'checkbox', 'radio'].includes(target.type)) {
+                    clearTimeout(debounceTimer);
+                    performLiveFilter(form, target);
+                }
+            });
+
+            mainEl.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (!form || form.tagName !== 'FORM') return;
+                if ((form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
+                e.preventDefault();
+                clearTimeout(debounceTimer);
+                performLiveFilter(form, document.activeElement);
+            });
+        })();
     </script>
 </body>
 </html>
