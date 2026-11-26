@@ -490,6 +490,23 @@ class OrderController extends Controller
             }
         }
 
+        // Strict guard: never allow placing unpaid Bakong KHQR or proofless ABA KHQR orders
+        if (in_array($paymentMethod, ['khqr', 'bakong_aba']) && $paymentStatus !== 'paid') {
+            return response()->json([
+                'success' => false,
+                'status' => 'error',
+                'message' => 'ការទូទាត់តាម Bakong KHQR មិនទាន់បានបង់ប្រាក់ទេ! សូមស្កេនបង់ប្រាក់ជាមុនសិន។',
+            ], 422);
+        }
+
+        if ($paymentMethod === 'aba_khqr' && $paymentStatus !== 'paid' && empty($paymentProof)) {
+            return response()->json([
+                'success' => false,
+                'status' => 'error',
+                'message' => 'សម្រាប់ ABA KHQR សូមភ្ជាប់រូបវិក្កយបត្របង់ប្រាក់ (Slip) ជាមុនសិន!',
+            ], 422);
+        }
+
         try {
             $txResult = DB::transaction(function () use (
                 $request, $user, $paymentMethod, $paymentStatus, $paymentProof,
