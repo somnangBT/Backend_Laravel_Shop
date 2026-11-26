@@ -9,17 +9,20 @@ use App\Models\Employee;
 class EmployeeController extends Controller
 {
     public function index(Request $request)
-{
-    // Fetch employees with pagination (10 records per page)
-    $employees = Employee::paginate(10);
-    $search = $request->input('search');
+    {
+        $search = $request->input('search');
         $department = $request->input('department');
         $status = $request->input('status');
         $sort = $request->input('sort', 'name');
-        $direction = $request->input('direction', 'asc');
-    
-        // Build the query for employees
-        $query = Employee::query()
+        $direction = strtolower((string) $request->input('direction', 'asc')) === 'desc' ? 'desc' : 'asc';
+
+        $allowedSorts = ['name', 'position', 'department', 'status', 'created_at'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'name';
+        }
+
+        // Single clean paginated query (removed 6 unused duplicate DB queries)
+        $employees = Employee::query()
             ->when($search, function ($query, $search) {
                 return $query->where(function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%")
@@ -32,35 +35,13 @@ class EmployeeController extends Controller
             })
             ->when($status && $status !== 'All Status', function ($query) use ($status) {
                 return $query->where('status', $status);
-            });
-    
-        // Get the total count of employees (with filters applied)
-        $totalEmployees = $query->count();
-    
-        // Get the count of active employees (with filters applied)
-        $activeEmployees = $query->clone()->where('status', 'Active')->count();
-    
-        // Get the count of on-leave employees (with filters applied)
-        $onLeaveEmployees = $query->clone()->where('status', 'On Leave')->count();
-    
-        // Get employee counts by department for the chart
-        $departmentCounts = Employee::query()
-            ->groupBy('department')
-            ->select('department', \DB::raw('count(*) as count'))
-            ->pluck('count', 'department')
-            ->toArray();
-    
-        // Get paginated employees
-        $employees = $query->orderBy($sort, $direction)
+            })
+            ->orderBy($sort, $direction)
             ->paginate(10)
             ->withQueryString();
-    
-        // Get unique departments for filter dropdown
-        $departments = Employee::select('department')->distinct()->orderBy('department')->pluck('department');
 
-    // Pass the employees data to the view
-    return view('employee', compact('employees'));
-}
+        return view('employee', compact('employees'));
+    }
 
 
     public function create()

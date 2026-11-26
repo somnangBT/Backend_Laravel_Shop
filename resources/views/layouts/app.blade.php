@@ -1074,6 +1074,24 @@
                 }
             }
 
+            // 0ms instant client-side row pre-filter while server AJAX syncs paginated DB results
+            function instantRowPreFilter(keyword) {
+                const q = String(keyword || '').trim().toLowerCase();
+                const regions = mainEl.querySelectorAll('[data-live-region]');
+                regions.forEach((region) => {
+                    const rows = region.querySelectorAll('tbody tr');
+                    rows.forEach((row) => {
+                        if (row.querySelector('td[colspan]')) return;
+                        if (!q) {
+                            row.style.display = '';
+                        } else {
+                            const text = (row.textContent || '').toLowerCase();
+                            row.style.display = text.includes(q) ? '' : 'none';
+                        }
+                    });
+                });
+            }
+
             mainEl.addEventListener('input', (e) => {
                 const target = e.target;
                 const form = target && target.closest ? target.closest('form') : null;
@@ -1081,8 +1099,26 @@
                 if ((form.getAttribute('method') || 'GET').toUpperCase() !== 'GET') return;
                 if (target.tagName === 'SELECT' || ['date', 'month', 'checkbox', 'radio'].includes(target.type)) return;
 
+                if (target.name === 'search' || target.name === 'product_search') {
+                    instantRowPreFilter(target.value);
+                }
+
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => performLiveFilter(form, target), 250);
+            });
+
+            // Prefetch sidebar links on hover to warm Vercel serverless function & speed up navigation
+            const prefetchedUrls = new Set();
+            document.querySelectorAll('#sidebar a[href]').forEach((link) => {
+                link.addEventListener('mouseenter', () => {
+                    const href = link.getAttribute('href');
+                    if (!href || href === '#' || prefetchedUrls.has(href)) return;
+                    prefetchedUrls.add(href);
+                    const hint = document.createElement('link');
+                    hint.rel = 'prefetch';
+                    hint.href = href;
+                    document.head.appendChild(hint);
+                }, { passive: true });
             });
 
             mainEl.addEventListener('change', (e) => {

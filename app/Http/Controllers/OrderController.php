@@ -21,20 +21,24 @@ class OrderController extends Controller
             return $this->apiIndex($request);
         }
 
-        // Web Admin Orders Management Listing
-        $query = Order::with(['user', 'orderItems.product'])->orderBy('created_at', 'desc');
+        // Web Admin Orders Management Listing (lean columns for fast remote Postgres query)
+        $query = Order::with([
+            'user:id,name,email',
+            'orderItems:id,order_id,product_id,quantity,price,discount',
+            'orderItems.product:pro_id,pro_name',
+        ])->orderBy('created_at', 'desc');
 
-        // Search by order id, customer name, email, or phone
+        // Search by order id, customer name, email, phone, or Bakong ref
         if ($request->filled('search')) {
-            $search = $request->input('search');
+            $search = trim($request->input('search'));
             $query->where(function ($q) use ($search) {
                 if (is_numeric($search)) {
-                    $q->where('id', (int)$search);
+                    $q->where('id', (int)$search)
+                      ->orWhere('customer_name', 'like', "%{$search}%");
                 } else {
                     $q->where('customer_name', 'like', "%{$search}%");
                 }
-                $q->orWhere('customer_name', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%")
+                $q->orWhere('phone', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%")
                   ->orWhere('bakong_ref', 'like', "%{$search}%")
                   ->orWhereHas('user', function ($uq) use ($search) {
@@ -61,17 +65,38 @@ class OrderController extends Controller
 
         $orders = $query->paginate(15)->withQueryString();
 
-        $counts = [
-            'all' => Order::count(),
-            'paid_pending_approval' => Order::where('status', 'pending')
-                ->whereIn('payment_status', ['paid', 'awaiting_approval'])
-                ->count(),
-            'pending' => Order::where('status', 'pending')->count(),
-            'preparing' => Order::where('status', 'preparing')->count(),
-            'delivering' => Order::where('status', 'delivering')->count(),
-            'completed' => Order::where('status', 'completed')->count(),
-            'cancelled' => Order::where('status', 'cancelled')->count(),
-        ];
+        // Skip tab-count aggregation on AJAX live table updates; otherwise combine all 7 counts into 1 query
+        if ($request->ajax()) {
+            $counts = [
+                'all' => 0,
+                'paid_pending_approval' => 0,
+                'pending' => 0,
+                'preparing' => 0,
+                'delivering' => 0,
+                'completed' => 0,
+                'cancelled' => 0,
+            ];
+        } else {
+            $agg = DB::table('orders')->selectRaw("
+                COUNT(*) as all_count,
+                SUM(CASE WHEN status = 'pending' AND payment_status IN ('paid', 'awaiting_approval') THEN 1 ELSE 0 END) as paid_pending_approval,
+                SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+                SUM(CASE WHEN status = 'preparing' THEN 1 ELSE 0 END) as preparing_count,
+                SUM(CASE WHEN status = 'delivering' THEN 1 ELSE 0 END) as delivering_count,
+                SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_count,
+                SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) as cancelled_count
+            ")->first();
+
+            $counts = [
+                'all' => (int) ($agg->all_count ?? 0),
+                'paid_pending_approval' => (int) ($agg->paid_pending_approval ?? 0),
+                'pending' => (int) ($agg->pending_count ?? 0),
+                'preparing' => (int) ($agg->preparing_count ?? 0),
+                'delivering' => (int) ($agg->delivering_count ?? 0),
+                'completed' => (int) ($agg->completed_count ?? 0),
+                'cancelled' => (int) ($agg->cancelled_count ?? 0),
+            ];
+        }
 
         return view('orders.index', compact('orders', 'counts'));
     }
@@ -971,14 +996,14 @@ class OrderController extends Controller
                 ]);
             }
 
-            $response = Http::timeout(8)->post("https://api.telegram.org/bot{$token}/sendMessage", $payload);
+            $response = Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendMessage", $payload);
             if (!$response->successful()) {
                 Log::error('Telegram API sendMessage Failed: ' . $response->body());
             }
 
             // Send receipt slip photo directly into Telegram chat if attached
             if ($order->payment_proof) {
-                Http::timeout(8)->post("https://api.telegram.org/bot{$token}/sendPhoto", [
+                Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendPhoto", [
                     'chat_id' => $chatId,
                     'photo' => $order->payment_proof,
                     'caption' => "🧾 វិក្កយបត្របង់ប្រាក់សម្រាប់ Order #{$order->id} (\${$totalUSD}) — {$customerName}",
@@ -1029,7 +1054,7 @@ class OrderController extends Controller
                   . "🚚 ស្ថានភាពថ្មី: {$statusEmoji}\n"
                   . "💰 តម្លៃសរុប: \$" . number_format((float)$order->total, 2);
 
-            Http::timeout(8)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+            Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,
                 'text' => $text,
             ]);

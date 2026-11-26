@@ -31,10 +31,10 @@ class AppServiceProvider extends ServiceProvider
 
         Blade::component('components.card', 'card');
 
-        // Share admin settings across admin layout and settings views (Cached to prevent slow DB roundtrips)
+        // Share admin settings across admin layout and settings views (Cached 5m to cut DB roundtrips)
         View::composer(['layouts.app', 'settings.*'], function ($view) {
             try {
-                $adminSettings = \Illuminate\Support\Facades\Cache::remember('admin_settings', 3600, function () {
+                $adminSettings = \Illuminate\Support\Facades\Cache::remember('admin_settings', 300, function () {
                     return Setting::first();
                 });
             } catch (\Throwable $e) {
