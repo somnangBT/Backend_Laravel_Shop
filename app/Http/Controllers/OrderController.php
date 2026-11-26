@@ -65,8 +65,8 @@ class OrderController extends Controller
 
         $orders = $query->paginate(15)->withQueryString();
 
-        // Skip tab-count aggregation on AJAX live table updates; otherwise combine all 7 counts into 1 query
-        if ($request->ajax()) {
+        // Skip tab-count aggregation during typing search; fetch counts on full load or live-refresh
+        if ($request->ajax() && !$request->boolean('with_counts')) {
             $counts = [
                 'all' => 0,
                 'paid_pending_approval' => 0,
@@ -99,6 +99,40 @@ class OrderController extends Controller
         }
 
         return view('orders.index', compact('orders', 'counts'));
+    }
+
+    /**
+     * Ultra-lightweight JSON endpoint for real-time Admin order notifications & auto-refresh
+     */
+    public function livePulse()
+    {
+        $latest = Order::select('id', 'customer_name', 'total', 'payment_method', 'payment_status', 'status', 'created_at')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $summary = DB::table('orders')->selectRaw("
+            COUNT(*) as total_count,
+            SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count,
+            SUM(CASE WHEN status = 'pending' AND payment_status IN ('paid', 'awaiting_approval') THEN 1 ELSE 0 END) as paid_waiting_count,
+            MAX(updated_at) as last_updated_at
+        ")->first();
+
+        return response()->json([
+            'latest_id' => $latest ? (int) $latest->id : 0,
+            'total_count' => (int) ($summary->total_count ?? 0),
+            'pending_count' => (int) ($summary->pending_count ?? 0),
+            'paid_waiting_count' => (int) ($summary->paid_waiting_count ?? 0),
+            'last_updated_at' => (string) ($summary->last_updated_at ?? ''),
+            'latest_order' => $latest ? [
+                'id' => $latest->id,
+                'customer_name' => $latest->customer_name ?: 'Guest Customer',
+                'total' => number_format((float) $latest->total, 2),
+                'payment_method' => $latest->payment_method ?: 'cash',
+                'payment_status' => $latest->payment_status ?: 'pending',
+                'status' => $latest->status ?: 'pending',
+                'time' => $latest->created_at ? $latest->created_at->timezone('Asia/Phnom_Penh')->format('h:i A') : '',
+            ] : null,
+        ]);
     }
 
     /**

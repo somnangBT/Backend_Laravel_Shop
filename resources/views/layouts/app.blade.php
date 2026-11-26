@@ -690,6 +690,7 @@
                     <a href="{{ route('orders.index') }}" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('orders*') ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' : 'hover:bg-sidebar-border/50' }} transition-colors">
                         <i class="fas fa-shopping-bag w-5 h-5"></i>
                         <span class="ml-3 sidebar-text">Order Requests & Payments</span>
+                        <span id="sidebar-orders-badge" style="background:#ef4444; color:#ffffff;" class="hidden ml-auto px-1.5 py-0.5 text-[10px] font-bold rounded-full leading-none">0</span>
                     </a>
                 </div>
 
@@ -810,11 +811,11 @@
                         </div>
                     </div>
 
-                    <!-- Notifications -->
-                    <button class="text-gray-400 hover:text-white relative p-2 rounded-lg hover:bg-gray-900 transition-colors">
+                    <!-- Live Order Notifications Bell -->
+                    <a href="{{ route('orders.index') }}" id="navbar-orders-bell" class="text-gray-400 hover:text-white relative p-2 rounded-lg hover:bg-gray-900 transition-colors" title="Customer Order Requests">
                         <i class="fas fa-bell text-lg"></i>
-                        <span class="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500"></span>
-                    </button>
+                        <span id="navbar-orders-dot" class="hidden absolute top-1.5 right-1.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-gray-950 animate-pulse"></span>
+                    </a>
                     
                     <!-- Dark / Light Theme Toggle -->
                     <button id="theme-toggle" class="text-gray-400 hover:text-white p-2 rounded-lg hover:bg-gray-900 transition-colors" title="Toggle Dark/Light Mode">
@@ -1139,6 +1140,201 @@
                 e.preventDefault();
                 clearTimeout(debounceTimer);
                 performLiveFilter(form, document.activeElement);
+            });
+        })();
+
+        // Real-Time New Order Watcher (Instant Popup Toast, Sound Chime, Sidebar Badge & Auto-Refresh Orders Table)
+        (function() {
+            const pulseUrl = @json(route('orders.live-pulse'));
+            const ordersUrl = @json(route('orders.index'));
+
+            const toastWrap = document.createElement('div');
+            toastWrap.id = 'live-order-toast-container';
+            toastWrap.style.cssText = 'position:fixed;bottom:20px;right:20px;z-index:70;display:flex;flex-direction:column;gap:10px;max-width:360px;width:calc(100vw - 40px);pointer-events:none;';
+            document.body.appendChild(toastWrap);
+
+            function escapeNoticeHtml(val) {
+                return String(val ?? '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+            }
+
+            function playOrderChime() {
+                try {
+                    const Ctx = window.AudioContext || window.webkitAudioContext;
+                    if (!Ctx) return;
+                    const ctx = new Ctx();
+                    [587.33, 880.0, 1174.66].forEach((freq, idx) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+                        gain.gain.setValueAtTime(0.11, ctx.currentTime + idx * 0.1);
+                        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.25);
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(ctx.currentTime + idx * 0.1);
+                        osc.stop(ctx.currentTime + idx * 0.1 + 0.26);
+                    });
+                } catch (_) {}
+            }
+
+            function updateOrderBadges(pendingCount) {
+                const badge = document.getElementById('sidebar-orders-badge');
+                const dot = document.getElementById('navbar-orders-dot');
+                const count = Number(pendingCount || 0);
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count > 99 ? '99+' : String(count);
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
+                }
+                if (dot) {
+                    if (count > 0) dot.classList.remove('hidden');
+                    else dot.classList.add('hidden');
+                }
+            }
+
+            function showOrderToast(order, isPaidAlert) {
+                if (!order) return;
+                const card = document.createElement('div');
+                card.style.cssText = 'pointer-events:auto;background:#0f172a;color:#f8fafc;border:2px solid ' + (isPaidAlert || order.payment_status === 'paid' ? '#10b981' : '#38bdf8') + ';border-radius:14px;padding:14px 16px;box-shadow:0 18px 40px rgba(0,0,0,0.45);font-family:Inter,sans-serif;transition:all 0.25s ease;';
+
+                const viaText = order.payment_method === 'aba_khqr'
+                    ? '🏦 ABA KHQR'
+                    : (['khqr', 'bakong_aba'].includes(order.payment_method) ? '⚡ Bakong KHQR' : '💵 Cash COD');
+                const paidText = order.payment_status === 'paid'
+                    ? '✅ Already Paid'
+                    : (order.payment_status === 'awaiting_approval' ? '🧾 Paid Claimed' : '⏳ Not Paid');
+
+                card.innerHTML =
+                    '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">' +
+                        '<div style="font-weight:800;font-size:13px;color:' + (order.payment_status === 'paid' ? '#34d399' : '#38bdf8') + ';">' +
+                            (isPaidAlert ? '💳 ភ្ញៀវទើបបង់ប្រាក់!' : '🎉 មានការបញ្ជាទិញថ្មី!') + ' Request #' + escapeNoticeHtml(order.id) +
+                        '</div>' +
+                        '<button type="button" style="background:none;border:none;color:#94a3b8;font-size:16px;line-height:1;cursor:pointer;">&times;</button>' +
+                    '</div>' +
+                    '<div style="font-size:12px;color:#e2e8f0;margin-top:6px;">' +
+                        '👤 <strong>' + escapeNoticeHtml(order.customer_name) + '</strong> • <strong style="color:#fbbf24;">$' + escapeNoticeHtml(order.total) + '</strong>' +
+                    '</div>' +
+                    '<div style="font-size:11px;color:#cbd5e1;margin-top:3px;">' +
+                        viaText + ' • ' + paidText + (order.time ? ' • 🕒 ' + escapeNoticeHtml(order.time) : '') +
+                    '</div>' +
+                    '<div style="margin-top:10px;display:flex;gap:8px;">' +
+                        '<button type="button" class="toast-view-btn" style="flex:1;background:#2563eb;color:#ffffff;border:none;border-radius:8px;padding:6px 10px;font-size:11px;font-weight:700;cursor:pointer;">👁 មើលភ្លាម ➔</button>' +
+                    '</div>';
+
+                const closeBtn = card.querySelector('button');
+                closeBtn.onclick = () => card.remove();
+
+                card.querySelector('.toast-view-btn').onclick = () => {
+                    if (document.querySelector('[data-live-region="orders-table"]') && typeof window.openOrderDetail === 'function' && window.__ORDERS_MAP?.[order.id]) {
+                        window.openOrderDetail(order.id);
+                        card.remove();
+                    } else {
+                        window.location.href = ordersUrl;
+                    }
+                };
+
+                toastWrap.appendChild(card);
+                setTimeout(() => { if (card.parentNode) card.remove(); }, 10000);
+            }
+
+            async function refreshOrdersTableSilently() {
+                const tableRegion = document.querySelector('[data-live-region="orders-table"]');
+                if (!tableRegion) return;
+                if (document.activeElement && document.activeElement.name === 'search') return;
+
+                try {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('with_counts', '1');
+                    const res = await fetch(url.toString(), {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    if (!res.ok) return;
+                    const html = await res.text();
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+
+                    const incomingTable = doc.querySelector('[data-live-region="orders-table"]');
+                    if (incomingTable) {
+                        tableRegion.innerHTML = incomingTable.innerHTML;
+                    }
+                    const incomingJson = doc.getElementById('orders-map-json');
+                    if (incomingJson) {
+                        try { window.__ORDERS_MAP = JSON.parse(incomingJson.textContent); } catch (_) {}
+                    }
+                    const currentTabs = document.getElementById('orders-status-tabs');
+                    const incomingTabs = doc.getElementById('orders-status-tabs');
+                    if (currentTabs && incomingTabs) {
+                        currentTabs.innerHTML = incomingTabs.innerHTML;
+                    }
+                } catch (_) {}
+            }
+
+            let baselineLatestId = Number(sessionStorage.getItem('luckshop_admin_latest_id') || 0);
+            let baselineTotalCount = sessionStorage.getItem('luckshop_admin_total_count');
+            let baselineUpdatedAt = sessionStorage.getItem('luckshop_admin_updated_at');
+            let baselinePaidWaiting = sessionStorage.getItem('luckshop_admin_paid_waiting');
+            let isFirstPulse = baselineLatestId === 0 && baselineTotalCount === null;
+            let pollingBusy = false;
+
+            async function pollLiveOrders() {
+                if (document.hidden || pollingBusy) return;
+                pollingBusy = true;
+                try {
+                    const res = await fetch(pulseUrl, { headers: { 'Accept': 'application/json' } });
+                    if (!res.ok) return;
+                    const data = await res.json();
+
+                    updateOrderBadges(data.pending_count);
+
+                    const latestId = Number(data.latest_id || 0);
+                    const totalCount = String(data.total_count ?? 0);
+                    const updatedAt = String(data.last_updated_at ?? '');
+                    const paidWaiting = Number(data.paid_waiting_count ?? 0);
+
+                    if (!isFirstPulse) {
+                        const hasNewOrder = latestId > baselineLatestId;
+                        const hasOrderChange = totalCount !== baselineTotalCount || updatedAt !== baselineUpdatedAt;
+                        const hasNewPaidClaim = baselinePaidWaiting !== null && paidWaiting > Number(baselinePaidWaiting);
+
+                        if (hasNewOrder) {
+                            playOrderChime();
+                            await refreshOrdersTableSilently();
+                            showOrderToast(data.latest_order, false);
+                        } else if (hasOrderChange) {
+                            if (hasNewPaidClaim) {
+                                playOrderChime();
+                                showOrderToast(data.latest_order, true);
+                            }
+                            await refreshOrdersTableSilently();
+                        }
+                    }
+
+                    baselineLatestId = latestId;
+                    baselineTotalCount = totalCount;
+                    baselineUpdatedAt = updatedAt;
+                    baselinePaidWaiting = String(paidWaiting);
+                    isFirstPulse = false;
+
+                    sessionStorage.setItem('luckshop_admin_latest_id', String(latestId));
+                    sessionStorage.setItem('luckshop_admin_total_count', totalCount);
+                    sessionStorage.setItem('luckshop_admin_updated_at', updatedAt);
+                    sessionStorage.setItem('luckshop_admin_paid_waiting', String(paidWaiting));
+                } catch (_) {
+                } finally {
+                    pollingBusy = false;
+                }
+            }
+
+            setTimeout(pollLiveOrders, 1200);
+            setInterval(pollLiveOrders, 5000);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) pollLiveOrders();
             });
         })();
     </script>

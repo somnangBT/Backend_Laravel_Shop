@@ -46,8 +46,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     // Slide Hero Routes
     Route::resource('slide-heroes', SlideHeroController::class);
 
-    // Orders & Kitchen Display Routes
+    // Order Requests Routes
     Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+    Route::get('/orders/live-pulse', [OrderController::class, 'livePulse'])->name('orders.live-pulse');
     Route::get('/orders/kitchen', [OrderController::class, 'kitchen'])->name('orders.kitchen');
     Route::post('/orders/{order}/status', [OrderController::class, 'updateStatus'])->name('orders.update-status');
     Route::post('/orders/{order}/approve', [OrderController::class, 'approveForDelivery'])->name('orders.approve');

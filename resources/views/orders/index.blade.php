@@ -18,6 +18,13 @@
         </div>
 
         <div class="flex items-center gap-3 flex-wrap">
+            <span style="background:#064e3b; color:#6ee7b7; border:1px solid #059669;"
+                  class="inline-flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold shadow-sm"
+                  title="ទំព័រនេះអាប់ដេតស្វ័យប្រវត្តិភ្លាមៗពេលភ្ញៀវទិញ">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Live Auto-Update</span>
+            </span>
+
             <a href="{{ route('reports.sales') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 transition-all">
                 <i class="fas fa-chart-line"></i>
                 <span>Sales Reports</span>
@@ -49,7 +56,7 @@
     @endif
 
     <!-- Status Tabs / Filter Pills -->
-    <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
+    <div id="orders-status-tabs" class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
         <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ !request('status') && !request('payment_status') ? 'theme-bg-gradient text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
             All Requests ({{ $counts['all'] }})
         </a>
