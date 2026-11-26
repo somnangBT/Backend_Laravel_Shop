@@ -5,7 +5,12 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Support\TelegramNotifier;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -318,6 +323,141 @@ class AuthController extends Controller
         }
 
         return back()->with('success', "Role for {$user->name} has been updated to {$user->role}.");
+    }
+
+    /**
+     * API: Request a 6-digit password reset code
+     */
+    public function apiForgotPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+        $existing = DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        if ($existing && !empty($existing->created_at) && Carbon::parse($existing->created_at)->addSeconds(60)->isFuture()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'សូមរង់ចាំ ១ នាទី មុននឹងស្នើសុំលេខកូដម្ដងទៀត។',
+            ], 429);
+        }
+
+        $mailer = config('mail.default');
+        $canSendEmail = !in_array($mailer, ['log', 'array', null, ''], true);
+
+        $user = User::where('email', $email)->first();
+        if ($user) {
+            $code = (string) random_int(100000, 999999);
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $email],
+                ['token' => Hash::make($code), 'created_at' => Carbon::now()]
+            );
+
+            if ($canSendEmail) {
+                try {
+                    Mail::raw(
+                        "LuckShop Password Reset Code: {$code}\n\nThis code expires in 15 minutes.",
+                        function ($msg) use ($email) {
+                            $msg->to($email)->subject('LuckShop — Password Reset Code');
+                        }
+                    );
+                } catch (\Exception $e) {
+                    Log::warning('Password reset mail failed: ' . $e->getMessage());
+                    $canSendEmail = false;
+                }
+            }
+
+            TelegramNotifier::sendText(
+                "🔑 សំណើសុំកំណត់ពាក្យសម្ងាត់ថ្មី (LuckShop)\n"
+                . "👤 អ្នកប្រើ: {$user->name}\n"
+                . "📧 អ៊ីមែល: {$email}\n"
+                . "🔢 លេខកូដ OTP: {$code}\n"
+                . "⏳ សុពលភាព: ១៥ នាទី"
+            );
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'channel' => $canSendEmail ? 'email' : 'telegram_support',
+            'message' => $canSendEmail
+                ? 'ប្រសិនបើអ៊ីមែលនេះមានក្នុងប្រព័ន្ធ លេខកូដ ៦ ខ្ទង់ត្រូវបានផ្ញើទៅអ៊ីមែលរបស់អ្នកហើយ។'
+                : 'សំណើកូដ ៦ ខ្ទង់ត្រូវបានបញ្ជូនទៅ Telegram អ្នកគ្រប់គ្រងហាងហើយ — សូមទាក់ទងហាងដើម្បីទទួលលេខកូដបញ្ចូលខាងក្រោម។',
+        ]);
+    }
+
+    /**
+     * API: Reset password using 6-digit verification code
+     */
+    public function apiResetPassword(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email|max:255',
+            'code' => 'required|string|size:6',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $email = strtolower(trim($validated['email']));
+        $record = DB::table('password_reset_tokens')->where('email', $email)->first();
+
+        if (
+            !$record ||
+            empty($record->created_at) ||
+            Carbon::parse($record->created_at)->addMinutes(15)->isPast() ||
+            !Hash::check($validated['code'], $record->token)
+        ) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'លេខកូដមិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ។ សូមស្នើសុំកូដថ្មី។',
+            ], 422);
+        }
+
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'រកមិនឃើញគណនីនេះទេ។',
+            ], 404);
+        }
+
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        DB::table('password_reset_tokens')->where('email', $email)->delete();
+        $user->tokens()->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'បានកំណត់ពាក្យសម្ងាត់ថ្មីជោគជ័យ! សូមចូលគណនីម្ដងទៀត។',
+        ]);
+    }
+
+    /**
+     * API: Change password for authenticated user
+     */
+    public function apiChangePassword(Request $request)
+    {
+        $validated = $request->validate([
+            'current_password' => 'required|string',
+            'password' => 'required|string|min:6|confirmed',
+        ]);
+
+        $user = Auth::guard('sanctum')->user() ?? Auth::user();
+        if (!$user || !Hash::check($validated['current_password'], $user->password)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'ពាក្យសម្ងាត់បច្ចុប្បន្នមិនត្រឹមត្រូវទេ។',
+            ], 422);
+        }
+
+        $user->password = Hash::make($validated['password']);
+        $user->save();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'បានផ្លាស់ប្តូរពាក្យសម្ងាត់ជោគជ័យ!',
+        ]);
     }
 
 }

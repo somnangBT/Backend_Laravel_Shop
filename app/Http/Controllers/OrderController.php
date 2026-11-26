@@ -341,43 +341,42 @@ class OrderController extends Controller
     }
 
     /**
-     * API: Get Order History for React Frontend
+     * API: Get Order History for authenticated React customer (or admin filter)
      */
     public function apiIndex(Request $request)
     {
-        $userId = null;
         $user = Auth::guard('sanctum')->user() ?? Auth::user();
-
-        if ($user) {
-            $userId = $user->id;
-        } elseif ($request->filled('user_id')) {
-            $userId = $request->input('user_id');
-        } elseif ($request->filled('email')) {
-            $u = \App\Models\User::where('email', $request->input('email'))->first();
-            if ($u) {
-                $userId = $u->id;
-            }
-        }
-
-        // Prevent unauthenticated dumping of all customer orders when no identifier is supplied
-        if (!$userId && !$request->filled('email')) {
+        if (!$user) {
             return response()->json([
-                'status' => 'success',
-                'data' => [],
-            ]);
+                'status' => 'error',
+                'message' => 'Authentication required. Please log in again.',
+            ], 401);
         }
 
         $query = Order::with(['items.product', 'orderItems.product'])
                       ->orderBy('created_at', 'desc');
 
-        $query->where(function($q) use ($userId, $request) {
-            if ($userId) {
-                $q->where('user_id', $userId);
+        if ($user->isAdmin()) {
+            if ($request->filled('user_id') || $request->filled('email')) {
+                $query->where(function ($q) use ($request) {
+                    if ($request->filled('user_id')) {
+                        $q->where('user_id', $request->input('user_id'));
+                    }
+                    if ($request->filled('email')) {
+                        $request->filled('user_id')
+                            ? $q->orWhere('email', $request->input('email'))
+                            : $q->where('email', $request->input('email'));
+                    }
+                });
             }
-            if ($request->filled('email')) {
-                $userId ? $q->orWhere('email', $request->input('email')) : $q->where('email', $request->input('email'));
-            }
-        });
+        } else {
+            $query->where(function ($q) use ($user) {
+                $q->where('user_id', $user->id);
+                if (!empty($user->email)) {
+                    $q->orWhere('email', $user->email);
+                }
+            });
+        }
 
         $orders = $query->limit(50)->get();
 
@@ -423,26 +422,70 @@ class OrderController extends Controller
     }
 
     /**
-     * API: Cancel an order from React Frontend (requires ownership verification & restores stock)
+     * API: Upload payment receipt slip via backend ImgBB proxy (keeps API key off frontend bundle)
+     */
+    public function uploadSlipApi(Request $request)
+    {
+        $request->validate([
+            'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
+        ]);
+
+        $apiKey = config('services.imgbb.key') ?: env('IMGBB_API_KEY');
+        if (empty($apiKey)) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Image upload service is not configured.',
+            ], 500);
+        }
+
+        try {
+            $imageFile = $request->file('image');
+            $response = Http::timeout(30)->asForm()->post('https://api.imgbb.com/1/upload', [
+                'key' => $apiKey,
+                'image' => base64_encode(file_get_contents($imageFile->getRealPath())),
+            ]);
+
+            $data = $response->json();
+            if ($response->successful() && !empty($data['data']['url'])) {
+                return response()->json([
+                    'status' => 'success',
+                    'url' => $data['data']['url'],
+                ]);
+            }
+
+            Log::warning('ImgBB slip upload failed: ' . json_encode($data));
+        } catch (\Exception $e) {
+            Log::error('ImgBB slip upload exception: ' . $e->getMessage());
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to upload payment slip image.',
+        ], 502);
+    }
+
+    /**
+     * API: Cancel an order from React Frontend (requires authenticated owner & restores stock)
      */
     public function cancelApi(Request $request, $id)
     {
         $authUser = Auth::guard('sanctum')->user() ?? Auth::user();
+        if (!$authUser) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Authentication required. Please log in again.',
+            ], 401);
+        }
 
-        $txResult = DB::transaction(function () use ($request, $id, $authUser) {
+        $txResult = DB::transaction(function () use ($id, $authUser) {
             $order = Order::with('orderItems')->lockForUpdate()->find($id);
             if (!$order) {
                 return ['error' => 'Order not found', 'code' => 404];
             }
 
-            // Ownership check: authenticated Sanctum user (or exact user_id + email match)
-            $isOwner = false;
-            if ($authUser) {
-                $isOwner = $authUser->isAdmin() || (int) $authUser->id === (int) $order->user_id;
-            } elseif ($request->filled('user_id') && $request->filled('email')) {
-                $isOwner = (int) $request->input('user_id') === (int) $order->user_id
-                    && strcasecmp((string) $request->input('email'), (string) $order->email) === 0;
-            }
+            $isOwner = $authUser->isAdmin()
+                || (int) $authUser->id === (int) $order->user_id
+                || (!empty($authUser->email) && strcasecmp((string) $authUser->email, (string) $order->email) === 0);
 
             if (!$isOwner) {
                 return ['error' => 'Unauthorized to cancel this order', 'code' => 403];

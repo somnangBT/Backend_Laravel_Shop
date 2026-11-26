@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\Api\CartController;
@@ -17,9 +18,15 @@ Route::middleware(['api'])->group(function () {
     Route::get('/products/search', [ProductController::class, 'searchApi']);
 });
 
-// Auth Routes (Real password verification & token creation)
-Route::post('/login', [AuthController::class, 'apiLogin']);
-Route::post('/register', [AuthController::class, 'apiRegister']);
+// Auth & Recovery Routes
+Route::post('/login', [AuthController::class, 'apiLogin'])->middleware('throttle:15,1');
+Route::post('/register', [AuthController::class, 'apiRegister'])->middleware('throttle:10,1');
+Route::post('/forgot-password', [AuthController::class, 'apiForgotPassword'])->middleware('throttle:5,1');
+Route::post('/reset-password', [AuthController::class, 'apiResetPassword'])->middleware('throttle:10,1');
+
+// Contact & Newsletter APIs
+Route::post('/contact', [MessageController::class, 'storeContactApi'])->middleware('throttle:10,1');
+Route::post('/newsletter', [MessageController::class, 'subscribeNewsletterApi'])->middleware('throttle:10,1');
 
 // Category API Routes (Public - Read Only)
 Route::get('/categories', [CategoryController::class, 'indexApi'])->name('api.categories.index');
@@ -32,12 +39,8 @@ Route::get('/products/{id}', [ProductController::class, 'showApi'])->name('api.p
 // Slide Hero API Route
 Route::get('/slide-heroes', [SlideHeroController::class, 'indexApi']);
 
-// Order API Routes (Accessible for customers & React Frontend)
-Route::get('/orders', [OrderController::class, 'apiIndex']);
+// Order Creation + Bakong Real-Time Check & Telegram Bot Webhook
 Route::post('/orders', [OrderController::class, 'store']);
-Route::post('/orders/{id}/cancel', [OrderController::class, 'cancelApi']);
-
-// Bakong KHQR Real-Time Payment Check & Telegram Bot Webhook
 Route::post('/bakong/check-payment', [OrderController::class, 'checkBakongPayment']);
 Route::post('/telegram/webhook', [OrderController::class, 'telegramWebhook']);
 
@@ -47,14 +50,20 @@ Route::post('/telegram/webhook', [OrderController::class, 'telegramWebhook']);
 // =============================================
 Route::middleware('auth:sanctum')->group(function () {
     
-    // Auth
+    // Auth & Password
     Route::post('/logout', [AuthController::class, 'apiLogout']);
+    Route::put('/change-password', [AuthController::class, 'apiChangePassword']);
     Route::get('/user', function (Request $request) {
         return response()->json([
             'status' => 'success',
             'data' => $request->user(),
         ]);
     });
+
+    // Customer Orders & Payment Slip Proxy Upload
+    Route::get('/orders', [OrderController::class, 'apiIndex']);
+    Route::post('/orders/{id}/cancel', [OrderController::class, 'cancelApi']);
+    Route::post('/upload-slip', [OrderController::class, 'uploadSlipApi']);
 
     // Cart Routes
     Route::get('/cart', [CartController::class, 'index']);
@@ -67,12 +76,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/checkout/summary', [CheckoutController::class, 'summary']);
     Route::post('/checkout', [CheckoutController::class, 'process']);
 
-    // Category Management (Admin / Protected depending on your setup)
+    // Category Management (Admin Only enforced in controller)
     Route::post('/categories', [CategoryController::class, 'storeApi'])->name('api.categories.store');
     Route::put('/categories/{id}', [CategoryController::class, 'updateApi'])->name('api.categories.update');
     Route::delete('/categories/{id}', [CategoryController::class, 'destroyApi'])->name('api.categories.destroy');
 
-    // Product Management
+    // Product Management (Admin Only enforced in controller)
     Route::put('/products/{id}', [ProductController::class, 'updateApi'])->name('api.products.update');
     Route::delete('/products/{id}', [ProductController::class, 'destroyApi'])->name('api.products.destroy');
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -205,8 +206,25 @@ class ProductController extends Controller
         ], 200);
     }
 
+    private function denyUnlessAdmin()
+    {
+        $user = Auth::guard('sanctum')->user() ?? Auth::user();
+        if (!$user || !$user->isAdmin()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Forbidden. Admin privileges required.',
+            ], 403);
+        }
+
+        return null;
+    }
+
     public function updateApi(Request $request, $id)
     {
+        if ($resp = $this->denyUnlessAdmin()) {
+            return $resp;
+        }
+
         $product = Product::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
@@ -263,6 +281,10 @@ class ProductController extends Controller
 
     public function destroyApi($id)
     {
+        if ($resp = $this->denyUnlessAdmin()) {
+            return $resp;
+        }
+
         $product = Product::findOrFail($id);
 
         try {
