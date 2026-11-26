@@ -165,10 +165,26 @@ class OrderController extends Controller
     public function checkBakongPayment(Request $request)
     {
         $request->validate([
-            'md5' => 'required|string|size:32',
+            'md5' => ['required', 'string', 'regex:/^[a-fA-F0-9]{32}$/'],
         ]);
 
-        $result = $this->checkBakongMd5($request->input('md5'));
+        $md5 = strtolower(trim($request->input('md5')));
+
+        // Replay protection: block reusing an MD5 hash already recorded on a paid order
+        $alreadyUsed = Order::where('khqr_md5', $md5)
+            ->where('payment_status', 'paid')
+            ->where('status', '!=', 'cancelled')
+            ->exists();
+        if ($alreadyUsed) {
+            return response()->json([
+                'status' => 'error',
+                'paid' => false,
+                'already_used' => true,
+                'message' => '⚠️ ប្រតិបត្តិការ Bakong KHQR នេះត្រូវបានប្រើរួចរាល់ហើយ សូមបង្កើត QR ថ្មី!',
+            ]);
+        }
+
+        $result = $this->checkBakongMd5($md5);
 
         return response()->json([
             'status' => 'success',
@@ -188,6 +204,14 @@ class OrderController extends Controller
      */
     public function telegramWebhook(Request $request)
     {
+        $secret = config('services.telegram.webhook_secret');
+        if (!empty($secret)) {
+            $headerSecret = (string) $request->header('X-Telegram-Bot-Api-Secret-Token');
+            if (!hash_equals($secret, $headerSecret)) {
+                return response()->json(['ok' => false, 'message' => 'Unauthorized webhook'], 403);
+            }
+        }
+
         $callback = $request->input('callback_query');
         if (!$callback) {
             return response()->json(['ok' => true]);
@@ -198,6 +222,12 @@ class OrderController extends Controller
         $chatId = $callback['message']['chat']['id'] ?? null;
         $messageId = $callback['message']['message_id'] ?? null;
         $token = config('services.telegram.bot_token') ?: env('TELEGRAM_BOT_TOKEN');
+        $configuredChatId = (string) (config('services.telegram.chat_id') ?: env('TELEGRAM_CHAT_ID'));
+
+        // Verify callback originates from our shop's Telegram admin chat
+        if (empty($configuredChatId) || (string) $chatId !== $configuredChatId) {
+            return response()->json(['ok' => false, 'message' => 'Forbidden chat'], 403);
+        }
 
         if (str_starts_with($data, 'approve_delivery_')) {
             $orderId = (int) str_replace('approve_delivery_', '', $data);
@@ -249,17 +279,25 @@ class OrderController extends Controller
             }
         }
 
+        // Prevent unauthenticated dumping of all customer orders when no identifier is supplied
+        if (!$userId && !$request->filled('email')) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [],
+            ]);
+        }
+
         $query = Order::with(['items.product', 'orderItems.product'])
                       ->orderBy('created_at', 'desc');
 
-        if ($userId) {
-            $query->where(function($q) use ($userId, $request) {
+        $query->where(function($q) use ($userId, $request) {
+            if ($userId) {
                 $q->where('user_id', $userId);
-                if ($request->filled('email')) {
-                    $q->orWhere('email', $request->input('email'));
-                }
-            });
-        }
+            }
+            if ($request->filled('email')) {
+                $userId ? $q->orWhere('email', $request->input('email')) : $q->where('email', $request->input('email'));
+            }
+        });
 
         $orders = $query->limit(50)->get();
 
@@ -344,14 +382,6 @@ class OrderController extends Controller
             $request->merge(['items' => $items]);
         }
 
-        if (!$request->filled('subtotal')) {
-            $subtotal = $request->input('total') ?? $request->input('total_amount') ?? 0;
-            $request->merge(['subtotal' => $subtotal]);
-        }
-        if (!$request->filled('total')) {
-            $total = $request->input('total_amount') ?? $request->input('subtotal') ?? 0;
-            $request->merge(['total' => $total]);
-        }
         if (!$request->filled('shipping_address') && $request->filled('address')) {
             $request->merge(['shipping_address' => $request->address]);
         }
@@ -359,34 +389,96 @@ class OrderController extends Controller
             $request->merge(['customer_name' => $request->name]);
         }
 
-        // ១. ធ្វើ Validation ទិន្នន័យដែលផ្ញើពី React
+        // ១. ធ្វើ Validation ទិន្នន័យ (តម្លៃពិតនឹងត្រូវគណនាពី Database នៅ Backend)
         $request->validate([
-            'items' => 'required|array',
+            'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,pro_id',
-            'items.*.quantity' => 'required|integer|min:1',
-            'items.*.price' => 'required|numeric',
-            'subtotal' => 'required|numeric',
-            'total' => 'nullable|numeric',
-            'tax' => 'nullable|numeric',       
-            'shipping' => 'nullable|numeric',  
-            'discount' => 'nullable|numeric',  
-            'customer_name' => 'nullable|string',
+            'items.*.quantity' => 'required|integer|min:1|max:500',
+            'items.*.price' => 'nullable|numeric|min:0',
+            'subtotal' => 'nullable|numeric|min:0',
+            'total' => 'nullable|numeric|min:0',
+            'tax' => 'nullable|numeric|min:0|max:500',
+            'shipping' => 'nullable|numeric|min:0|max:500',
+            'discount' => 'nullable|numeric|min:0',
+            'promo_code' => 'nullable|string|max:50',
+            'payment_method' => 'nullable|in:cash,khqr,aba_khqr,bakong_aba',
+            'khqr_md5' => ['nullable', 'string', 'regex:/^[a-fA-F0-9]{32}$/'],
+            'payment_proof' => 'nullable|string|max:1000',
+            'bakong_ref' => 'nullable|string|max:255',
+            'customer_name' => 'nullable|string|max:255',
         ]);
 
         $user = Auth::guard('sanctum')->user() ?? Auth::user();
 
-        // ពិនិត្យការទូទាត់ Bakong KHQR (Auto MD5 Verification) ឬ ABA Direct KHQR
+        // គណនាតម្លៃទំនិញ និង Total ពិតប្រាកដពី Database (ការពារករណីក្លែងបន្លំតម្លៃពី Client)
+        $pricing = $this->computeVerifiedOrderTotals(
+            $request->items,
+            (float) ($request->input('tax', 0)),
+            (float) ($request->input('shipping', 0)),
+            $request->input('promo_code')
+        );
+
+        if (isset($pricing['error'])) {
+            return response()->json([
+                'success' => false,
+                'status' => 'error',
+                'message' => $pricing['error'],
+            ], 422);
+        }
+
+        $verifiedItems = $pricing['items'];
+        $computedSubtotal = $pricing['subtotal'];
+        $computedTax = $pricing['tax'];
+        $computedShipping = $pricing['shipping'];
+        $computedDiscount = $pricing['discount'];
+        $computedTotal = $pricing['total'];
+        $normalizedPromo = $pricing['promo_code'];
+
+        // ពិនិត្យការទូទាត់ Bakong KHQR (Auto MD5 Verification + Replay/Amount/Account Guard) ឬ ABA Direct KHQR
         $paymentMethod = $request->input('payment_method', 'cash');
-        $khqrMd5 = $request->input('khqr_md5');
+        $khqrMd5 = $request->filled('khqr_md5') ? strtolower(trim((string) $request->input('khqr_md5'))) : null;
         $paymentProof = $request->input('payment_proof');
+        if ($paymentProof && !preg_match('#^(https?://|/)#i', trim((string) $paymentProof))) {
+            $paymentProof = null;
+        }
         $paymentStatus = 'pending';
         $bakongRef = $request->input('bakong_ref');
         $bakongSender = null;
 
         if (in_array($paymentMethod, ['khqr', 'aba_khqr', 'bakong_aba'])) {
             if ($khqrMd5) {
+                // Fast-path replay guard before calling Bakong Open API
+                $existingMd5Order = Order::where('khqr_md5', $khqrMd5)
+                    ->where('status', '!=', 'cancelled')
+                    ->first();
+                if ($existingMd5Order) {
+                    return response()->json([
+                        'success' => false,
+                        'status' => 'error',
+                        'message' => "កូដ Bakong KHQR នេះត្រូវបានប្រើសម្រាប់ Order #{$existingMd5Order->id} រួចហើយ! សូមបង្កើត QR ថ្មី។",
+                    ], 409);
+                }
+
                 $bakongCheck = $this->checkBakongMd5($khqrMd5);
                 if ($bakongCheck['paid']) {
+                    if (!$this->bakongPaymentMatchesOrder($bakongCheck, $computedTotal)) {
+                        $paidDisp = ($bakongCheck['currency'] === 'KHR')
+                            ? number_format((float) ($bakongCheck['amount'] ?? 0)) . ' KHR'
+                            : '$' . number_format((float) ($bakongCheck['amount'] ?? 0), 2);
+                        Log::warning('Bakong underpayment or currency mismatch rejected', [
+                            'md5' => $khqrMd5,
+                            'paid_amount' => $bakongCheck['amount'],
+                            'paid_currency' => $bakongCheck['currency'],
+                            'expected_usd' => $computedTotal,
+                        ]);
+
+                        return response()->json([
+                            'success' => false,
+                            'status' => 'error',
+                            'message' => "ចំនួនទឹកប្រាក់ដែលបានបង់ ({$paidDisp}) មិនគ្រប់តម្លៃសរុប (\${$computedTotal}) នៃការបញ្ជាទិញនេះទេ! សូមផ្ទៀងផ្ទាត់ និងស្កេន QR ថ្មី។",
+                        ], 422);
+                    }
+
                     $paymentStatus = 'paid';
                     $bakongRef = $bakongCheck['ref'];
                     $bakongSender = $bakongCheck['sender'];
@@ -399,7 +491,39 @@ class OrderController extends Controller
         }
 
         try {
-            $order = DB::transaction(function () use ($request, $user, $paymentMethod, $paymentStatus, $paymentProof, $khqrMd5, $bakongRef) {
+            $txResult = DB::transaction(function () use (
+                $request, $user, $paymentMethod, $paymentStatus, $paymentProof,
+                $khqrMd5, $bakongRef, $verifiedItems, $computedSubtotal,
+                $computedTax, $computedShipping, $computedDiscount, $computedTotal, $normalizedPromo
+            ) {
+                // Atomic lock-based replay check against concurrent duplicate submissions
+                if ($khqrMd5) {
+                    $dupMd5 = Order::where('khqr_md5', $khqrMd5)
+                        ->where('status', '!=', 'cancelled')
+                        ->lockForUpdate()
+                        ->first();
+                    if ($dupMd5) {
+                        return [
+                            'error' => "ប្រតិបត្តិការ Bakong KHQR នេះត្រូវបានកត់ត្រាសម្រាប់ Order #{$dupMd5->id} រួចហើយ។",
+                            'code' => 409,
+                        ];
+                    }
+                }
+
+                if ($paymentStatus === 'paid' && $bakongRef) {
+                    $dupRef = Order::where('bakong_ref', $bakongRef)
+                        ->where('payment_status', 'paid')
+                        ->where('status', '!=', 'cancelled')
+                        ->lockForUpdate()
+                        ->first();
+                    if ($dupRef) {
+                        return [
+                            'error' => "លេខយោង Bakong Ref ({$bakongRef}) នេះត្រូវបានប្រើរួចហើយ! សូមបង្កើត QR ថ្មី។",
+                            'code' => 409,
+                        ];
+                    }
+                }
+
                 $candidateId = $user ? $user->id : $request->input('user_id');
                 $resolvedUserId = ($candidateId && \App\Models\User::where('id', $candidateId)->exists())
                     ? $candidateId
@@ -409,15 +533,16 @@ class OrderController extends Controller
                     ?? $request->input('name')
                     ?? ($user ? $user->name : null);
 
-                // ២. បង្កើត Order (Status = pending រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន)
+                // ២. បង្កើត Order ដោយប្រើតម្លៃដែលបានគណនាផ្ទៀងផ្ទាត់ពី Server
                 $order = Order::create([
                     'user_id' => $resolvedUserId,
                     'customer_name' => $customerName,
-                    'subtotal' => $request->subtotal,
-                    'tax' => $request->tax ?? 0,
-                    'shipping' => $request->shipping ?? 0,
-                    'discount' => $request->discount ?? 0,
-                    'total' => $request->total ?? $request->subtotal,
+                    'subtotal' => $computedSubtotal,
+                    'tax' => $computedTax,
+                    'shipping' => $computedShipping,
+                    'discount' => $computedDiscount,
+                    'promo_code' => $normalizedPromo ?: null,
+                    'total' => $computedTotal,
                     'status' => 'pending',
                     'email' => $request->email ?? ($user ? $user->email : null),
                     'payment_method' => $paymentMethod,
@@ -429,14 +554,14 @@ class OrderController extends Controller
                     'phone' => $request->phone ?? null,
                 ]);
 
-                // ៣. បញ្ចូលផលិតផលទៅក្នុងតារាង Order Items
-                foreach ($request->items as $item) {
+                // ៣. បញ្ចូលផលិតផលទៅក្នុងតារាង Order Items តាមតម្លៃពិតពី Database
+                foreach ($verifiedItems as $item) {
                     OrderItem::create([
                         'order_id' => $order->id,
                         'product_id' => $item['product_id'],
                         'quantity' => $item['quantity'],
                         'price' => $item['price'],
-                        'discount' => $item['discount'] ?? 0,
+                        'discount' => $item['discount'],
                     ]);
                 }
 
@@ -445,11 +570,21 @@ class OrderController extends Controller
                     Cart::where('user_id', $user->id)->delete();
                 }
 
-                return $order;
+                return ['order' => $order];
             });
 
+            if (isset($txResult['error'])) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'error',
+                    'message' => $txResult['error'],
+                ], $txResult['code'] ?? 409);
+            }
+
+            $order = $txResult['order'];
+
             // ៤. ផ្ញើសារទៅកាន់ Telegram Bot
-            $this->sendTelegramOrderNotification($order, $request->items, $bakongSender);
+            $this->sendTelegramOrderNotification($order, $verifiedItems, $bakongSender);
 
             // ៥. បញ្ជូនលទ្ធផលជោគជ័យត្រឡប់ទៅ React វិញ
             return response()->json([
@@ -571,10 +706,95 @@ class OrderController extends Controller
     }
 
     /**
-     * Query NBC Bakong Open API to check whether a dynamic KHQR MD5 has been paid.
+     * Compute authoritative order subtotal, discount, total, and items directly from DB product prices.
+     */
+    private function computeVerifiedOrderTotals(array $items, float $tax, float $shipping, ?string $promoCode = null): array
+    {
+        $productIds = collect($items)->pluck('product_id')->unique()->values();
+        $products = Product::whereIn('pro_id', $productIds)->get()->keyBy('pro_id');
+
+        $computedSubtotal = 0.0;
+        $verifiedItems = [];
+
+        foreach ($items as $item) {
+            $product = $products->get($item['product_id']);
+            if (!$product) {
+                return ['error' => 'រកមិនឃើញទំនិញ #' . ($item['product_id'] ?? '?') . ' នៅក្នុងប្រព័ន្ធទេ។'];
+            }
+
+            $qty = max(1, (int) ($item['quantity'] ?? 1));
+            $dbPrice = max(0.0, (float) $product->price);
+            $dbDiscountPct = max(0.0, min(100.0, (float) ($product->discount ?? 0)));
+            $rawDiscounted = $product->getRawOriginal('discounted_price');
+            $effectiveUnit = ($rawDiscounted !== null && is_numeric($rawDiscounted) && (float) $rawDiscounted > 0)
+                ? (float) $rawDiscounted
+                : ($dbPrice * (1 - $dbDiscountPct / 100));
+
+            $computedSubtotal += ($effectiveUnit * $qty);
+            $verifiedItems[] = [
+                'product_id' => $product->pro_id,
+                'name' => $product->pro_name,
+                'quantity' => $qty,
+                'price' => round($dbPrice, 2),
+                'discount' => round($dbDiscountPct, 2),
+            ];
+        }
+
+        $computedSubtotal = round($computedSubtotal, 2);
+        $tax = round(max(0.0, $tax), 2);
+        $shipping = round(max(0.0, $shipping), 2);
+
+        $normalizedPromo = strtoupper(trim((string) ($promoCode ?? '')));
+        $allowedPromos = [
+            'KHMER10' => 10,
+            'WELCOME15' => 15,
+            'DELICIOUS20' => 20,
+        ];
+        $promoRate = $allowedPromos[$normalizedPromo] ?? 0;
+        $computedDiscount = $promoRate > 0 ? round($computedSubtotal * ($promoRate / 100), 2) : 0.0;
+        $computedTotal = round(max(0.01, $computedSubtotal + $tax + $shipping - $computedDiscount), 2);
+
+        return [
+            'items' => $verifiedItems,
+            'subtotal' => $computedSubtotal,
+            'tax' => $tax,
+            'shipping' => $shipping,
+            'discount' => $computedDiscount,
+            'promo_code' => $promoRate > 0 ? $normalizedPromo : null,
+            'total' => $computedTotal,
+        ];
+    }
+
+    /**
+     * Verify paid amount and currency from NBC Bakong API cover the server-computed USD total.
+     */
+    private function bakongPaymentMatchesOrder(array $bakongCheck, float $orderTotalUsd): bool
+    {
+        $paidAmount = (float) ($bakongCheck['amount'] ?? 0);
+        $paidCurrency = strtoupper((string) ($bakongCheck['currency'] ?? 'USD'));
+
+        if ($paidCurrency === 'USD') {
+            return ($paidAmount + 0.01) >= $orderTotalUsd;
+        }
+
+        if ($paidCurrency === 'KHR') {
+            $expectedKhr = $orderTotalUsd * 4000;
+            return $paidAmount >= ($expectedKhr * 0.98);
+        }
+
+        return false;
+    }
+
+    /**
+     * Query NBC Bakong Open API to check whether a dynamic KHQR MD5 has been paid to this shop.
      */
     private function checkBakongMd5(string $md5): array
     {
+        $md5 = strtolower(trim($md5));
+        if (!preg_match('/^[a-f0-9]{32}$/', $md5)) {
+            return ['paid' => false, 'ref' => null, 'sender' => null, 'amount' => null, 'currency' => null, 'message' => 'Invalid MD5'];
+        }
+
         $token = config('services.bakong.token') ?: env('BAKONG_TOKEN');
         if (empty($token)) {
             return ['paid' => false, 'ref' => null, 'sender' => null, 'amount' => null, 'currency' => null, 'message' => 'BAKONG_TOKEN not configured'];
@@ -589,12 +809,32 @@ class OrderController extends Controller
                 $body = $res->json();
                 if (isset($body['responseCode']) && (int)$body['responseCode'] === 0 && !empty($body['data'])) {
                     $tx = $body['data'];
+                    $expectedAccount = strtolower(trim((string) (config('services.bakong.account_id') ?: 'somnang_yorn@bkrt')));
+                    $toAccount = strtolower(trim((string) ($tx['toAccountId'] ?? '')));
+
+                    if ($expectedAccount !== '' && $toAccount !== $expectedAccount) {
+                        Log::warning('Bakong receiver account mismatch rejected', [
+                            'md5' => $md5,
+                            'expected' => $expectedAccount,
+                            'actual' => $toAccount,
+                        ]);
+                        return [
+                            'paid' => false,
+                            'ref' => null,
+                            'sender' => null,
+                            'amount' => null,
+                            'currency' => null,
+                            'message' => 'គណនីទទួលប្រាក់ KHQR មិនត្រូវគ្នាជាមួយគណនីហាងឡើយ',
+                        ];
+                    }
+
                     return [
                         'paid' => true,
                         'ref' => $tx['externalRef'] ?? $tx['hash'] ?? $md5,
                         'sender' => $tx['fromAccountId'] ?? null,
+                        'to_account' => $toAccount,
                         'amount' => isset($tx['amount']) ? (float)$tx['amount'] : null,
-                        'currency' => $tx['currency'] ?? 'USD',
+                        'currency' => strtoupper((string) ($tx['currency'] ?? 'USD')),
                         'message' => 'Success',
                     ];
                 }
