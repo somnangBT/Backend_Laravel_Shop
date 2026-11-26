@@ -657,11 +657,16 @@ class OrderController extends Controller
                 $paymentStatusText = "🧾 អតិថិជនបានបង់លុយចូល {$dest} (រង់ចាំ Admin ពិនិត្យ Approve)"
                     . ($order->bakong_ref ? "\n🔖 យោង/អ្នកផ្ញើ: {$order->bakong_ref}" : "");
             } elseif ($order->payment_status === 'paid') {
-                $paymentStatusText = "✅ បានទូទាត់ប្រាក់រួចរាល់";
+                $paymentStatusText = "✅ Already Paid (បានបង់ប្រាក់រួចរាល់)"
+                    . ($order->bakong_ref ? "\n🔖 យោង: {$order->bakong_ref}" : "");
             } else {
-                $paymentStatusText = $isKhqr ? "⏳ រង់ចាំ Admin ពិនិត្យលុយចូល" : "💵 ទូទាត់ពេលដឹក";
+                $paymentStatusText = $isKhqr
+                    ? "⏳ Not Paid Yet (មិនទាន់បង់ប្រាក់ — រង់ចាំផ្ទៀងផ្ទាត់ KHQR)"
+                    : "⏳ Not Paid Yet (💵 ទូទាត់ពេលដឹក)";
             }
 
+            $requestedAt = ($order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
+            $paymentWhen = ($order->updated_at ?? $order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
             $phone = $order->phone ?: 'មិនទាន់បញ្ជាក់';
             $address = $order->shipping_address ?: 'ភ្នំពេញ';
             $totalUSD = number_format((float)$order->total, 2);
@@ -670,15 +675,18 @@ class OrderController extends Controller
             $adminUrl = "{$adminBase}/orders?payment_status=paid_pending_approval";
 
             $headerLine = ($order->payment_status === 'paid')
-                ? "🎉 ភ្ញៀវបានបង់លុយពិតរួចរាល់ (Order #{$order->id})!\n⏳ ស្ថានភាព: PAID — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n"
-                : "🛒 មានការបញ្ជាទិញថ្មី (Order #{$order->id})!\n⏳ ស្ថានភាព: PENDING — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n";
+                ? "🎉 ភ្ញៀវបានបង់លុយរួចរាល់ (Request #{$order->id})!\n✅ Already Paid — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n"
+                : "🛒 មានសំណើបញ្ជាទិញថ្មី (Request #{$order->id})!\n⏳ ស្ថានភាព: PENDING — រង់ចាំការពិនិត្យ\n\n";
 
             $message = $headerLine
                      . "👤 អតិថិជន: {$customerName}\n"
                      . "📞 ទូរស័ព្ទ: {$phone}\n"
                      . "📍 ទីតាំងដឹក: {$address}\n"
-                     . "💳 វិធីទូទាត់: {$paymentMethodLabel}\n"
-                     . "📌 ស្ថានភាពបង់ប្រាក់: {$paymentStatusText}\n\n"
+                     . "🕒 ពេលវេលាស្នើទិញ: {$requestedAt}\n"
+                     . "💳 តាមរយៈ (Via): {$paymentMethodLabel}\n"
+                     . "📌 ស្ថានភាពបង់ប្រាក់: {$paymentStatusText}\n"
+                     . (in_array($order->payment_status, ['paid', 'awaiting_approval']) ? "⏱ ពេលវេលាបង់/ផ្ញើសំណើ: {$paymentWhen}\n" : "")
+                     . "\n"
                      . "📦 ទំនិញដែលបានទិញ:\n"
                      . $productList
                      . "\n💰 សរុបទឹកប្រាក់: \${$totalUSD} = ({$totalKHR} ៛)\n";
@@ -738,15 +746,29 @@ class OrderController extends Controller
 
             $customerName = $order->customer_name ?: (optional($order->user)->name ?? 'Customer');
             $statusEmoji = match ($order->status) {
-                'preparing' => '🍳 កំពុងរៀបចំ (Preparing)',
+                'preparing' => '📦 កំពុងវេចខ្ចប់ទំនិញ (Packing)',
                 'delivering' => '🛵 កំពុងដឹកជញ្ជូន (Delivering)',
                 'completed' => '✅ ដឹកជញ្ជូនជោគជ័យ (Completed)',
                 default => strtoupper($order->status),
             };
+            $viaChannel = match ($order->payment_method) {
+                'aba_khqr' => 'ABA KHQR',
+                'khqr', 'bakong_aba' => 'Bakong KHQR',
+                default => strtoupper($order->payment_method ?: 'Cash (COD)'),
+            };
+            $paidLabel = match ($order->payment_status) {
+                'paid' => '✅ Already Paid (បង់រួច)',
+                'awaiting_approval' => '🧾 Paid Claimed (Verify)',
+                'refunded' => '↩️ Refunded',
+                default => '⏳ Not Paid Yet',
+            };
+            $when = ($order->updated_at ?? $order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
 
-            $text = "📢 បច្ចុប្បន្នភាព Order #{$order->id} ({$source})\n"
+            $text = "📢 បច្ចុប្បន្នភាព Request #{$order->id} ({$source})\n"
                   . "👤 អតិថិជន: {$customerName} ({$order->phone})\n"
-                  . "💳 ការបង់ប្រាក់: " . strtoupper($order->payment_status) . "\n"
+                  . "💳 ការបង់ប្រាក់: {$paidLabel}\n"
+                  . "🏦 តាមរយៈ (Via): {$viaChannel}\n"
+                  . "🕒 ពេលវេលា: {$when}\n"
                   . "🚚 ស្ថានភាពថ្មី: {$statusEmoji}\n"
                   . "💰 តម្លៃសរុប: \$" . number_format((float)$order->total, 2);
 

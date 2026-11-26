@@ -11,23 +11,13 @@
                     <i class="fas fa-shopping-bag text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="text-2xl sm:text-3xl font-bold text-white">Orders Management</h1>
-                    <p class="text-gray-400 text-sm mt-0.5">គ្រប់គ្រងការបញ្ជាទិញ ស្ថានភាពម្ហូប និងការទូទាត់ប្រាក់</p>
+                    <h1 class="text-2xl sm:text-3xl font-bold text-white">Customer Order Requests</h1>
+                    <p class="text-gray-400 text-sm mt-0.5">ពិនិត្យស្ថានភាពសំណើបញ្ជាទិញ ៖ បង់ប្រាក់ហើយឬនៅ តាមរយៈវិធីអ្វី និងពេលណា</p>
                 </div>
             </div>
         </div>
 
         <div class="flex items-center gap-3 flex-wrap">
-            <a href="{{ route('orders.kitchen') }}" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-amber-600 hover:bg-amber-500 shadow-lg shadow-amber-900/30 transition-all">
-                <i class="fas fa-fire-burner"></i>
-                <span>Kitchen Display (KDS)</span>
-                @if(($counts['pending'] + $counts['preparing']) > 0)
-                    <span class="px-2 py-0.5 rounded-full text-xs bg-white text-amber-900 font-extrabold ml-1">
-                        {{ $counts['pending'] + $counts['preparing'] }}
-                    </span>
-                @endif
-            </a>
-
             <a href="{{ route('reports.sales') }}" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl font-medium text-sm text-gray-300 bg-gray-800 hover:bg-gray-700 border border-gray-700 transition-all">
                 <i class="fas fa-chart-line"></i>
                 <span>Sales Reports</span>
@@ -61,25 +51,25 @@
     <!-- Status Tabs / Filter Pills -->
     <div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6 scrollbar-none">
         <a href="{{ route('orders.index') }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ !request('status') && !request('payment_status') ? 'theme-bg-gradient text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            All Orders ({{ $counts['all'] }})
+            All Requests ({{ $counts['all'] }})
         </a>
         <a href="{{ route('orders.index', ['payment_status' => 'paid_pending_approval']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('payment_status') === 'paid_pending_approval' ? 'bg-emerald-500 text-gray-950 shadow-md font-bold' : 'bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 border border-emerald-700/50' }}">
-            💳 បង់លុយរួច (រង់ចាំ Approve) ({{ $counts['paid_pending_approval'] ?? 0 }})
+            💳 Already Paid / Verify ({{ $counts['paid_pending_approval'] ?? 0 }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'pending']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'pending' ? 'bg-indigo-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            Pending ({{ $counts['pending'] }})
+            ⏳ Pending ({{ $counts['pending'] }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'preparing']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'preparing' ? 'bg-amber-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            Preparing ({{ $counts['preparing'] }})
+            📦 Packing ({{ $counts['preparing'] }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'delivering']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'delivering' ? 'bg-cyan-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            Delivering ({{ $counts['delivering'] }})
+            🛵 Delivering ({{ $counts['delivering'] }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'completed']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'completed' ? 'bg-emerald-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            Completed ({{ $counts['completed'] }})
+            ✅ Completed ({{ $counts['completed'] }})
         </a>
         <a href="{{ route('orders.index', ['status' => 'cancelled']) }}" class="px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all {{ request('status') === 'cancelled' ? 'bg-red-600 text-white shadow-md' : 'bg-gray-900 text-gray-300 hover:bg-gray-800 border border-gray-800' }}">
-            Cancelled ({{ $counts['cancelled'] }})
+            ❌ Cancelled ({{ $counts['cancelled'] }})
         </a>
     </div>
 
@@ -128,11 +118,11 @@
             <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="bg-gray-950/80 text-gray-400 text-xs font-semibold uppercase tracking-wider border-b border-gray-800">
-                        <th class="py-3.5 px-4 w-16 text-center whitespace-nowrap">Order #</th>
+                        <th class="py-3.5 px-4 w-28 text-center whitespace-nowrap">Request # & When</th>
                         <th class="py-3.5 px-4 min-w-[150px] whitespace-nowrap">Customer</th>
-                        <th class="py-3.5 px-4 min-w-[200px] whitespace-nowrap">Items Ordered</th>
-                        <th class="py-3.5 px-4 text-center whitespace-nowrap min-w-[110px]">Payment</th>
-                        <th class="py-3.5 px-4 text-center whitespace-nowrap min-w-[150px]">Order Status</th>
+                        <th class="py-3.5 px-4 min-w-[200px] whitespace-nowrap">Items Requested</th>
+                        <th class="py-3.5 px-4 text-center whitespace-nowrap min-w-[190px]">Paid? • Via What • When</th>
+                        <th class="py-3.5 px-4 text-center whitespace-nowrap min-w-[150px]">Request Status</th>
                         <th class="py-3.5 px-4 text-right whitespace-nowrap min-w-[120px]">Total Amount</th>
                         <th class="py-3.5 px-4 text-center whitespace-nowrap min-w-[140px]">Actions</th>
                     </tr>
@@ -141,12 +131,23 @@
                     @forelse($orders as $order)
                         <tr class="hover:bg-gray-800/30 transition-colors">
                             
-                            <!-- Order ID & Time -->
+                            <!-- Request ID & When -->
                             <td class="py-4 px-4 text-center whitespace-nowrap">
+                                @php
+                                    $reqTime = $order->created_at ? $order->created_at->timezone('Asia/Phnom_Penh') : null;
+                                @endphp
                                 <span class="font-mono font-bold text-sm text-cyan-400 block">#{{ $order->id }}</span>
-                                <span class="text-[11px] text-gray-500 font-mono block mt-0.5">
-                                    {{ $order->created_at ? $order->created_at->format('M d, H:i') : '' }}
-                                </span>
+                                @if($reqTime)
+                                    <span class="text-[11px] text-gray-200 font-medium block mt-1" title="Requested at {{ $reqTime->format('d M Y, h:i:s A') }} (Cambodia)">
+                                        {{ $reqTime->format('d M Y') }}
+                                    </span>
+                                    <span class="text-[11px] text-cyan-300 font-mono block">
+                                        {{ $reqTime->format('h:i A') }}
+                                    </span>
+                                    <span class="text-[10px] text-gray-500 block mt-0.5">
+                                        {{ $reqTime->diffForHumans() }}
+                                    </span>
+                                @endif
                             </td>
 
                             <!-- Customer -->
@@ -185,29 +186,62 @@
                                 </div>
                             </td>
 
-                            <!-- Payment Method & Status -->
+                            <!-- Already Paid? Via What? When? -->
                             <td class="py-4 px-4 text-center whitespace-nowrap">
-                                <div class="text-xs font-semibold uppercase text-gray-300 flex items-center justify-center gap-1">
+                                @php
+                                    $payTime = ($order->updated_at ?? $order->created_at)?->timezone('Asia/Phnom_Penh');
+                                    $createdTime = $order->created_at?->timezone('Asia/Phnom_Penh');
+                                @endphp
+                                <div class="mb-1.5">
+                                    @if($order->payment_status === 'paid')
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[11px] font-bold">
+                                            ✅ Already Paid
+                                        </span>
+                                    @elseif($order->payment_status === 'awaiting_approval')
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 text-[11px] font-bold">
+                                            🧾 Paid Claimed (Verify)
+                                        </span>
+                                    @elseif($order->payment_status === 'refunded')
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[11px] font-bold">
+                                            ↩️ Refunded
+                                        </span>
+                                    @else
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-500/40 text-[11px] font-bold">
+                                            ⏳ Not Paid Yet
+                                        </span>
+                                    @endif
+                                </div>
+                                <div class="text-xs font-semibold text-gray-300 flex items-center justify-center gap-1">
+                                    <span class="text-[10px] text-gray-400">Via:</span>
                                     @if($order->payment_method === 'aba_khqr')
                                         <span class="px-1.5 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-700/60 text-[10px]">🏦 ABA KHQR</span>
                                     @elseif(in_array($order->payment_method, ['khqr', 'bakong_aba']))
                                         <span class="px-1.5 py-0.5 rounded bg-red-950/80 text-red-300 border border-red-700/60 text-[10px]">⚡ Bakong KHQR</span>
                                     @else
-                                        <span>{{ $order->payment_method ?: 'Cash' }}</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-gray-800 text-gray-200 border border-gray-700 text-[10px]">💵 {{ $order->payment_method ?: 'Cash (COD)' }}</span>
                                     @endif
                                 </div>
+                                @if(in_array($order->payment_status, ['paid', 'awaiting_approval']) && $payTime)
+                                    <div class="text-[10px] text-gray-400 font-mono mt-1">
+                                        🕒 {{ $order->payment_status === 'paid' ? 'Paid:' : 'Sent:' }} {{ $payTime->format('d M, h:i A') }}
+                                    </div>
+                                @elseif($createdTime)
+                                    <div class="text-[10px] text-gray-500 font-mono mt-1">
+                                        🕒 Req: {{ $createdTime->format('d M, h:i A') }}
+                                    </div>
+                                @endif
                                 @if($order->bakong_ref)
-                                    <div class="text-[10px] {{ $order->payment_status === 'paid' ? 'text-emerald-400' : 'text-cyan-300' }} font-mono mt-1" title="Ref / Sender: {{ $order->bakong_ref }}">
-                                        {{ $order->payment_status === 'paid' ? '✅ Paid Ref:' : '🔖 Ref:' }} {{ \Illuminate\Support\Str::limit($order->bakong_ref, 22) }}
+                                    <div class="text-[10px] {{ $order->payment_status === 'paid' ? 'text-emerald-400' : 'text-cyan-300' }} font-mono mt-0.5" title="Ref / Sender: {{ $order->bakong_ref }}">
+                                        {{ $order->payment_status === 'paid' ? '✅ Ref:' : '🔖 Ref:' }} {{ \Illuminate\Support\Str::limit($order->bakong_ref, 22) }}
                                     </div>
                                 @endif
                                 <form action="{{ route('orders.update-status', $order->id) }}" method="POST" class="inline-block mt-1">
                                     @csrf
                                     <select name="payment_status" onchange="this.form.submit()" 
                                             class="text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer focus:outline-none {{ $order->payment_status === 'paid' ? 'bg-emerald-950 text-emerald-400 border border-emerald-800' : ($order->payment_status === 'awaiting_approval' ? 'bg-cyan-950 text-cyan-300 border border-cyan-700' : 'bg-amber-950 text-amber-400 border border-amber-800') }}">
-                                        <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Pending</option>
-                                        <option value="awaiting_approval" {{ $order->payment_status === 'awaiting_approval' ? 'selected' : '' }}>Awaiting Approve</option>
-                                        <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Paid</option>
+                                        <option value="pending" {{ $order->payment_status === 'pending' ? 'selected' : '' }}>Not Paid</option>
+                                        <option value="awaiting_approval" {{ $order->payment_status === 'awaiting_approval' ? 'selected' : '' }}>Verify Claim</option>
+                                        <option value="paid" {{ $order->payment_status === 'paid' ? 'selected' : '' }}>Already Paid</option>
                                         <option value="refunded" {{ $order->payment_status === 'refunded' ? 'selected' : '' }}>Refunded</option>
                                     </select>
                                 </form>
@@ -234,7 +268,7 @@
                                                 'bg-indigo-950 text-indigo-400 border-indigo-800'))) 
                                             }}">
                                         <option value="pending" {{ $order->status === 'pending' ? 'selected' : '' }}>⏳ Pending</option>
-                                        <option value="preparing" {{ $order->status === 'preparing' ? 'selected' : '' }}>🍳 Preparing</option>
+                                        <option value="preparing" {{ $order->status === 'preparing' ? 'selected' : '' }}>📦 Packing</option>
                                         <option value="delivering" {{ $order->status === 'delivering' ? 'selected' : '' }}>🛵 Delivering</option>
                                         <option value="completed" {{ $order->status === 'completed' ? 'selected' : '' }}>✅ Completed</option>
                                         <option value="cancelled" {{ $order->status === 'cancelled' ? 'selected' : '' }}>❌ Cancelled</option>
@@ -348,16 +382,16 @@ function printOrderReceipt(order) {
 
     const receiptHtml = `
         <div style="text-align: center; border-bottom: 1px solid #000; padding-bottom: 8px; margin-bottom: 8px;">
-            <h2 style="margin: 0; font-size: 18px; font-weight: bold;">DeliciousEats</h2>
+            <h2 style="margin: 0; font-size: 18px; font-weight: bold;">LuckShop</h2>
             <p style="margin: 2px 0; font-size: 11px;">Phnom Penh, Cambodia</p>
-            <p style="margin: 2px 0; font-size: 11px;">Tel: 012 345 678</p>
+            <p style="margin: 2px 0; font-size: 11px;">https://luckshop-kh.vercel.app</p>
             <h3 style="margin: 6px 0 0 0; font-size: 14px;">ORDER RECEIPT #${order.id}</h3>
         </div>
         <div style="font-size: 11px; margin-bottom: 8px;">
-            <div>Date: ${new Date(order.created_at).toLocaleString()}</div>
-            <div>Customer: ${order.user ? order.user.name : (order.email || 'Guest')}</div>
+            <div>Date: ${new Date(order.created_at).toLocaleString('en-US', { timeZone: 'Asia/Phnom_Penh' })}</div>
+            <div>Customer: ${order.user ? order.user.name : (order.customer_name || order.email || 'Guest')}</div>
             <div>Phone: ${order.phone || 'N/A'}</div>
-            <div>Payment: ${(order.payment_method || 'CASH').toUpperCase()} (${order.payment_status || 'pending'})</div>
+            <div>Payment: ${(order.payment_method || 'CASH').toUpperCase()} (${order.payment_status === 'paid' ? 'ALREADY PAID' : (order.payment_status || 'not paid').toUpperCase()})</div>
         </div>
         <table style="width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 8px;">
             <thead>
@@ -381,7 +415,7 @@ function printOrderReceipt(order) {
             </div>
         </div>
         <div style="text-align: center; margin-top: 15px; font-size: 11px; border-top: 1px dashed #000; padding-top: 8px;">
-            <p style="margin: 0;">Thank you for dining with us!</p>
+            <p style="margin: 0;">Thank you for shopping with us!</p>
             <p style="margin: 2px 0;">សូមអរគុណ និងសូមអញ្ជើញមកម្ដងទៀត!</p>
         </div>
     `;

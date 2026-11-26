@@ -682,20 +682,14 @@
                     </a>
                 </div>
 
-                <!-- Orders & Kitchen Section -->
+                <!-- Order Requests Section -->
                 <div class="px-3 mt-6 space-y-1">
-                    <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Orders & Kitchen</div>
+                    <div class="sidebar-group-label text-xs font-medium text-sidebar-foreground/70 px-3 mb-2">Order Requests</div>
                     
-                    <!-- Orders Management -->
-                    <a href="{{ route('orders.index') }}" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('orders') ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' : 'hover:bg-sidebar-border/50' }} transition-colors">
+                    <!-- Customer Order Requests & Payment Verification -->
+                    <a href="{{ route('orders.index') }}" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('orders*') ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' : 'hover:bg-sidebar-border/50' }} transition-colors">
                         <i class="fas fa-shopping-bag w-5 h-5"></i>
-                        <span class="ml-3 sidebar-text">Orders</span>
-                    </a>
-
-                    <!-- Kitchen Display (KDS) -->
-                    <a href="{{ route('orders.kitchen') }}" class="sidebar-menu-item flex items-center h-10 px-3 rounded-md text-sm font-medium {{ request()->is('orders/kitchen*') ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm' : 'hover:bg-sidebar-border/50' }} transition-colors">
-                        <i class="fas fa-fire-burner w-5 h-5"></i>
-                        <span class="ml-3 sidebar-text">Kitchen (KDS)</span>
+                        <span class="ml-3 sidebar-text">Order Requests & Payments</span>
                     </a>
                 </div>
 
