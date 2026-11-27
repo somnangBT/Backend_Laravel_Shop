@@ -19,7 +19,9 @@ Route::middleware(['api'])->group(function () {
 });
 
 // Auth & Recovery Routes
+Route::get('/auth/verification-channels', [AuthController::class, 'apiVerificationChannels']);
 Route::post('/login', [AuthController::class, 'apiLogin'])->middleware('throttle:15,1');
+Route::post('/register/send-code', [AuthController::class, 'apiSendRegisterCode'])->middleware('throttle:6,1');
 Route::post('/register', [AuthController::class, 'apiRegister'])->middleware('throttle:10,1');
 Route::post('/forgot-password', [AuthController::class, 'apiForgotPassword'])->middleware('throttle:5,1');
 Route::post('/reset-password', [AuthController::class, 'apiResetPassword'])->middleware('throttle:10,1');

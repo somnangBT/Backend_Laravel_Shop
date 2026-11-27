@@ -6,11 +6,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
 use App\Support\TelegramNotifier;
+use App\Support\VerificationDispatcher;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
@@ -76,38 +78,65 @@ class AuthController extends Controller
         return redirect('/dashboard')->with('success', 'Registration successful');
     }
 
-    // API login method
+    // API login method (supports Email or Phone Number)
     public function apiLogin(Request $request)
     {
         $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
+            'email' => 'nullable|string|max:255',
+            'contact' => 'nullable|string|max:255',
+            'password' => 'required|string',
         ]);
-    
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            $user = Auth::user();
-            $token = $user->createToken('API Token')->plainTextToken;
-    
-            return response()->json([
-                'message' => 'Login successful',
-                'access_token' => $token,
-                'token_type' => 'Bearer',
-                'user' => [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                ],
-            ]);
-        }
-    
-        return response()->json([
-            'message' => 'Invalid credentials.',
-        ], 401);
-    }
-    
-    
 
+        $rawLogin = trim((string) ($request->input('contact') ?? $request->input('email') ?? ''));
+        if ($rawLogin === '') {
+            return response()->json(['message' => 'Email or phone number is required.'], 422);
+        }
+
+        $parsed = VerificationDispatcher::normalizeContact($rawLogin);
+        $user = null;
+
+        if ($parsed['type'] === 'email') {
+            $user = User::where('email', $parsed['value'])->first();
+        } elseif ($parsed['type'] === 'phone' && Schema::hasColumn('users', 'phone')) {
+            $user = User::where('phone', $parsed['value'])
+                ->orWhere('phone', $rawLogin)
+                ->first();
+        } else {
+            $user = User::where('email', strtolower($rawLogin))->first();
+        }
+
+        if (!$user || !Hash::check($request->password, $user->password)) {
+            return response()->json([
+                'message' => 'Invalid credentials.',
+            ], 401);
+        }
+
+        $token = $user->createToken('API Token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Login successful',
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'email' => $user->email,
+                'phone' => Schema::hasColumn('users', 'phone') ? ($user->phone ?? null) : null,
+                'role' => $user->role,
+            ],
+        ]);
+    }
+
+    // Report which registration OTP channels (Gmail SMTP / SMS Gateway) are configured
+    public function apiVerificationChannels()
+    {
+        return response()->json([
+            'status' => 'success',
+            'email_ready' => VerificationDispatcher::isEmailMailerConfigured(),
+            'sms_ready' => VerificationDispatcher::isSmsConfigured(),
+            'sms_provider' => config('services.sms.provider', 'none'),
+        ]);
+    }
 
     // API logout method
     public function apiLogout(Request $request)
@@ -121,30 +150,174 @@ class AuthController extends Controller
         ]);
     }
 
-    // API register method
+    // Send 6-digit registration verification OTP to Email (Gmail) or Phone (SMS)
+    public function apiSendRegisterCode(Request $request)
+    {
+        $rawContact = trim((string) ($request->input('contact') ?? $request->input('email') ?? ''));
+        $contact = VerificationDispatcher::normalizeContact($rawContact);
+
+        if ($contact['type'] === 'invalid') {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'សូមបញ្ចូលអ៊ីមែល Gmail ឬ លេខទូរស័ព្ទឱ្យបានត្រឹមត្រូវ។',
+            ], 422);
+        }
+
+        if ($contact['type'] === 'email') {
+            if (User::where('email', $contact['value'])->exists()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'អ៊ីមែលនេះមានគណនីរួចហើយ។ សូមចូលប្រើប្រាស់ ឬប្រើអ៊ីមែលផ្សេង។',
+                ], 422);
+            }
+
+            if (!VerificationDispatcher::isEmailMailerConfigured()) {
+                return response()->json([
+                    'status' => 'error',
+                    'not_configured' => true,
+                    'contact_type' => 'email',
+                    'message' => 'មិនទាន់បានកំណត់ Gmail SMTP លើ Server ទេ — សូមបន្ថែម MAIL_MAILER=smtp និង Gmail App Password ក្នុង Vercel Env Vars ជាមុន។',
+                ], 503);
+            }
+        }
+
+        if ($contact['type'] === 'phone') {
+            if (!Schema::hasColumn('users', 'phone')) {
+                return response()->json([
+                    'status' => 'error',
+                    'not_configured' => true,
+                    'contact_type' => 'phone',
+                    'message' => 'Database មិនទាន់បានបន្ថែមប្រព័ន្ធលេខទូរស័ព្ទ (Migration) ទេ។ សូមចុះឈ្មោះតាម Gmail សិន!',
+                ], 503);
+            }
+
+            if (User::where('phone', $contact['value'])->exists()) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'លេខទូរស័ព្ទនេះមានគណនីរួចហើយ។',
+                ], 422);
+            }
+
+            if (!VerificationDispatcher::isSmsConfigured()) {
+                return response()->json([
+                    'status' => 'error',
+                    'not_configured' => true,
+                    'contact_type' => 'phone',
+                    'message' => 'សេវាកម្មផ្ញើសារ SMS ទៅទូរស័ព្ទមិនទាន់បានភ្ជាប់ API Key (PlasGate / MekongSMS / Twilio) នៅឡើយទេ។ សូមប្រើ Gmail ដើម្បីចុះឈ្មោះសិន!',
+                ], 503);
+            }
+        }
+
+        $tokenKey = 'reg:' . $contact['value'];
+        $existing = DB::table('password_reset_tokens')->where('email', $tokenKey)->first();
+
+        if ($existing && !empty($existing->created_at) && Carbon::parse($existing->created_at)->addSeconds(60)->isFuture()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'សូមរង់ចាំ ១ នាទី មុននឹងស្នើសុំលេខកូដថ្មីម្ដងទៀត។',
+            ], 429);
+        }
+
+        $code = (string) random_int(100000, 999999);
+        DB::table('password_reset_tokens')->updateOrInsert(
+            ['email' => $tokenKey],
+            ['token' => Hash::make($code), 'created_at' => Carbon::now()]
+        );
+
+        $dispatch = VerificationDispatcher::sendCode($contact['type'], $contact['value'], $code, 'register');
+        if (!$dispatch['ok']) {
+            DB::table('password_reset_tokens')->where('email', $tokenKey)->delete();
+            return response()->json([
+                'status' => 'error',
+                'not_configured' => !$dispatch['configured'],
+                'contact_type' => $contact['type'],
+                'message' => $dispatch['error'] ?? 'មិនអាចផ្ញើលេខកូដផ្ទៀងផ្ទាត់បានទេ។',
+            ], $dispatch['configured'] ? 502 : 503);
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'contact_type' => $contact['type'],
+            'contact' => $contact['value'],
+            'message' => $contact['type'] === 'email'
+                ? "លេខកូដ ៦ ខ្ទង់ត្រូវបានផ្ញើទៅ Gmail ({$contact['value']}) រួចរាល់! សូមពិនិត្យ Inbox ឬ Spam ។"
+                : "លេខកូដ ៦ ខ្ទង់ត្រូវបានផ្ញើជាសារ SMS ទៅលេខ {$contact['value']} រួចរាល់!",
+        ]);
+    }
+
+    // API register method (verifies 6-digit OTP sent to Gmail or Phone SMS)
     public function apiRegister(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $rawContact = trim((string) ($request->input('contact') ?? $request->input('email') ?? ''));
+        $contact = VerificationDispatcher::normalizeContact($rawContact);
+
+        $validator = Validator::make(array_merge($request->all(), ['contact' => $rawContact]), [
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
+            'contact' => 'required|string|max:255',
+            'code' => 'required|string|size:6',
             'password' => 'required|min:6|confirmed',
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'errors' => $validator->errors(),
-            ], 400);
+            ], 422);
         }
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'user', // Default role for API registration
-        ]);
+        if ($contact['type'] === 'invalid') {
+            return response()->json([
+                'message' => 'សូមបញ្ចូលអ៊ីមែល Gmail ឬ លេខទូរស័ព្ទឱ្យបានត្រឹមត្រូវ។',
+            ], 422);
+        }
 
-        // Log the user in and create a token
-        $token = $user->createToken('YourAppName')->plainTextToken;
+        $tokenKey = 'reg:' . $contact['value'];
+        $record = DB::table('password_reset_tokens')->where('email', $tokenKey)->first();
+
+        if (
+            !$record ||
+            empty($record->created_at) ||
+            Carbon::parse($record->created_at)->addMinutes(15)->isPast() ||
+            !Hash::check(trim((string) $request->code), $record->token)
+        ) {
+            return response()->json([
+                'message' => 'លេខកូដផ្ទៀងផ្ទាត់មិនត្រឹមត្រូវ ឬផុតកំណត់ហើយ។ សូមស្នើសុំកូដថ្មី។',
+            ], 422);
+        }
+
+        if ($contact['type'] === 'email' && User::where('email', $contact['value'])->exists()) {
+            return response()->json([
+                'message' => 'អ៊ីមែលនេះមានគណនីរួចហើយ។',
+            ], 422);
+        }
+
+        if ($contact['type'] === 'phone') {
+            if (!Schema::hasColumn('users', 'phone')) {
+                return response()->json([
+                    'message' => 'Database មិនទាន់បានបន្ថែមប្រព័ន្ធលេខទូរស័ព្ទ (Migration) ទេ។',
+                ], 503);
+            }
+            if (User::where('phone', $contact['value'])->exists()) {
+                return response()->json([
+                    'message' => 'លេខទូរស័ព្ទនេះមានគណនីរួចហើយ។',
+                ], 422);
+            }
+        }
+
+        $userData = [
+            'name' => trim($request->name),
+            'email' => $contact['type'] === 'email' ? $contact['value'] : null,
+            'email_verified_at' => $contact['type'] === 'email' ? Carbon::now() : null,
+            'password' => Hash::make($request->password),
+            'role' => 'user',
+        ];
+        if ($contact['type'] === 'phone' && Schema::hasColumn('users', 'phone')) {
+            $userData['phone'] = $contact['value'];
+        }
+
+        $user = User::create($userData);
+        DB::table('password_reset_tokens')->where('email', $tokenKey)->delete();
+
+        $token = $user->createToken('API Token')->plainTextToken;
 
         return response()->json([
             'message' => 'Registration successful',
@@ -154,9 +327,10 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'phone' => Schema::hasColumn('users', 'phone') ? ($user->phone ?? null) : null,
                 'role' => $user->role ?? 'user',
             ],
-        ]);
+        ], 201);
     }
 
     public function getAllUsers(Request $request)

@@ -48,4 +48,15 @@ return [
         'aba_account' => env('ABA_ACCOUNT_NUMBER', '007842694'),
     ],
 
+    'sms' => [
+        'provider' => env('SMS_PROVIDER', 'none'), // plasgate | mekongsms | twilio | none
+        'api_key' => env('SMS_API_KEY'),
+        'api_secret' => env('SMS_API_SECRET'),
+        'sender' => env('SMS_SENDER', 'LuckShop'),
+        'endpoint' => env('SMS_ENDPOINT'),
+        'twilio_sid' => env('TWILIO_ACCOUNT_SID'),
+        'twilio_token' => env('TWILIO_AUTH_TOKEN'),
+        'twilio_from' => env('TWILIO_FROM_NUMBER'),
+    ],
+
 ];
