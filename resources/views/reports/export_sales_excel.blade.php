@@ -110,7 +110,7 @@
     <!-- Header Section -->
     <table>
         <tr>
-            <td colspan="12" class="report-title">DELICIOUSEATS — SALES & REVENUE REPORT</td>
+            <td colspan="12" class="report-title">LUCKSHOP — SALES & REVENUE REPORT</td>
         </tr>
         <tr>
             <td colspan="12" class="report-subtitle">

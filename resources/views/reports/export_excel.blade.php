@@ -99,7 +99,7 @@
 </head>
 <body>
     <!-- Title Banner -->
-    <div class="report-title">DELICIOUSEATS - CUSTOMER DATA REPORT</div>
+    <div class="report-title">LUCKSHOP - CUSTOMER DATA REPORT</div>
     <div class="report-subtitle">របាយការណ៍ទិន្នន័យអតិថិជន ({{ strtoupper($summary['period']) }})</div>
 
     <!-- Metadata -->

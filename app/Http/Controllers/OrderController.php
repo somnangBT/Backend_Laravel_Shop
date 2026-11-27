@@ -562,6 +562,13 @@ class OrderController extends Controller
             'payment_proof' => 'nullable|string|max:1000',
             'bakong_ref' => 'nullable|string|max:255',
             'customer_name' => 'nullable|string|max:255',
+            'phone' => ($request->is('api/*') || $request->expectsJson())
+                ? 'required|string|min:7|max:30'
+                : 'nullable|string|max:30',
+            'shipping_address' => ($request->is('api/*') || $request->expectsJson())
+                ? 'required|string|min:3|max:500'
+                : 'nullable|string|max:500',
+            'notes' => 'nullable|string|max:1000',
         ]);
 
         $user = Auth::guard('sanctum')->user() ?? Auth::user();
@@ -721,10 +728,7 @@ class OrderController extends Controller
                     }
                 }
 
-                $candidateId = $user ? $user->id : $request->input('user_id');
-                $resolvedUserId = ($candidateId && \App\Models\User::where('id', $candidateId)->exists())
-                    ? $candidateId
-                    : null;
+                $resolvedUserId = $user ? $user->id : null;
 
                 $customerName = $request->input('customer_name')
                     ?? $request->input('name')

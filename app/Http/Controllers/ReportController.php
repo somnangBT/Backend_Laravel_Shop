@@ -268,7 +268,7 @@ class ReportController extends Controller
             fputs($handle, "\xEF\xBB\xBF");
 
             // Header
-            fputcsv($handle, ['DELICIOUSEATS - SALES & REVENUE REPORT']);
+            fputcsv($handle, ['LUCKSHOP - SALES & REVENUE REPORT']);
             fputcsv($handle, ['Period:', $summary['period_label']]);
             fputcsv($handle, ['Date Range:', $summary['start_date']->format('Y-m-d') . ' to ' . $summary['end_date']->format('Y-m-d')]);
             fputcsv($handle, ['Generated At:', $summary['generated_at']->format('Y-m-d H:i:s')]);
@@ -608,7 +608,7 @@ class ReportController extends Controller
             fputs($handle, "\xEF\xBB\xBF");
 
             // Report Header
-            fputcsv($handle, ['DELICIOUSEATS - CUSTOMER DATA REPORT']);
+            fputcsv($handle, ['LUCKSHOP - CUSTOMER DATA REPORT']);
             fputcsv($handle, ['Period:', $summary['period_label']]);
             fputcsv($handle, ['Date Range:', $summary['start_date']->format('Y-m-d') . ' to ' . $summary['end_date']->format('Y-m-d')]);
             fputcsv($handle, ['Generated At:', $summary['generated_at']->format('Y-m-d H:i:s')]);

@@ -104,7 +104,7 @@
                             </div>
                             <div class="overflow-hidden">
                                 <h4 class="text-white font-semibold text-base truncate">{{ auth()->user()->name ?? 'Administrator' }}</h4>
-                                <p class="text-gray-400 text-xs truncate mt-0.5">{{ auth()->user()->email ?? 'admin@deliciouseats.com' }}</p>
+                                <p class="text-gray-400 text-xs truncate mt-0.5">{{ auth()->user()->email ?? 'admin@luckshop.com' }}</p>
                                 <span class="inline-block mt-2 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                                     Admin Role
                                 </span>
