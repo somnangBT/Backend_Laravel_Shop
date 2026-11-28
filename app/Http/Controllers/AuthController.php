@@ -113,6 +113,16 @@ class AuthController extends Controller
 
         $token = $user->createToken('API Token')->plainTextToken;
 
+        $lastOrder = \App\Models\Order::where('user_id', $user->id)
+            ->whereNotNull('shipping_address')
+            ->where('shipping_address', '!=', '')
+            ->orderByDesc('id')
+            ->first(['customer_name', 'phone', 'shipping_address', 'payment_method']);
+
+        $resolvedPhone = Schema::hasColumn('users', 'phone')
+            ? ($user->phone ?: ($lastOrder->phone ?? null))
+            : ($lastOrder->phone ?? null);
+
         return response()->json([
             'message' => 'Login successful',
             'access_token' => $token,
@@ -121,7 +131,14 @@ class AuthController extends Controller
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
-                'phone' => Schema::hasColumn('users', 'phone') ? ($user->phone ?? null) : null,
+                'phone' => $resolvedPhone,
+                'address' => $lastOrder->shipping_address ?? null,
+                'saved_delivery' => $lastOrder ? [
+                    'customer_name' => $lastOrder->customer_name ?: $user->name,
+                    'phone' => $resolvedPhone,
+                    'shipping_address' => $lastOrder->shipping_address,
+                    'payment_method' => $lastOrder->payment_method,
+                ] : null,
                 'role' => $user->role,
             ],
         ]);
