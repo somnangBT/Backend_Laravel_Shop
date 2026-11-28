@@ -246,7 +246,7 @@
                             </svg>
                             View Category
                         </a>
-                        <form action="{{ route('categories.destroy', $category->cat_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this category? This will remove all products from this category.');">
+                        <form action="{{ route('categories.destroy', $category->cat_id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុបប្រភេទទំនិញ «{{ $category->cat_name }}» មែនទេ? ទំនិញនៅក្នុងប្រភេទនេះនឹងត្រូវដកចេញពីប្រភេទ។" data-confirm-title="បញ្ជាក់ការលុបប្រភេទទំនិញ">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="w-full bg-rose-600/20 hover:bg-rose-600/30 text-rose-400 font-medium py-2 px-4 rounded-lg flex items-center gap-2 transition-all duration-200">

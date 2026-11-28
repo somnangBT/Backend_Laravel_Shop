@@ -53,6 +53,8 @@ class ClientController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:clients,email,' . $id,
+            'phone' => 'nullable|string|max:50',
+            'address' => 'nullable|string|max:500',
             'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
@@ -69,6 +71,8 @@ class ClientController extends Controller
         // Update other fields
         $client->name = $request->name;
         $client->email = $request->email;
+        $client->phone = $request->phone;
+        $client->address = $request->address;
         $client->save();
 
         return redirect()->route('clients.index')->with('success', 'Client updated successfully.');

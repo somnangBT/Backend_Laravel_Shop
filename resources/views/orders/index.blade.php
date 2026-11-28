@@ -250,7 +250,10 @@
                                         <form action="{{ route('orders.approve', $order->id) }}" method="POST" class="inline">
                                             @csrf
                                             <button type="submit"
-                                                    onclick="return confirm('អនុម័ត និងបញ្ជូន Order #{{ $order->id }} ទៅដឹកជញ្ជូន?')"
+                                                    data-confirm="អនុម័តការបង់ប្រាក់ និងបញ្ជូន Order #{{ $order->id }} ទៅដឹកជញ្ជូន?"
+                                                    data-confirm-title="បញ្ជាក់ការអនុម័តការបញ្ជាទិញ"
+                                                    data-confirm-ok="អនុម័ត & ដឹកជញ្ជូន"
+                                                    data-confirm-variant="success"
                                                     class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium transition-colors cursor-pointer"
                                                     title="Approve & Deliver">
                                                 Approve
@@ -366,7 +369,10 @@
                 <form id="detailApproveForm" method="POST" class="hidden">
                     @csrf
                     <button type="submit"
-                            onclick="return confirm('អនុម័តការបង់ប្រាក់ និងបញ្ជូន Order នេះទៅដឹកជញ្ជូន?')"
+                            data-confirm="អនុម័តការបង់ប្រាក់ និងបញ្ជូន Order នេះទៅដឹកជញ្ជូន?"
+                            data-confirm-title="បញ្ជាក់ការអនុម័តការបញ្ជាទិញ"
+                            data-confirm-ok="អនុម័ត & ដឹកជញ្ជូន"
+                            data-confirm-variant="success"
                             style="background:#059669; color:#ffffff;"
                             class="px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer">
                         Approve

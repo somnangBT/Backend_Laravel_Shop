@@ -32,18 +32,27 @@
                             <td class="px-4 py-3">{{ $report->generated_by }}</td>
                             <td class="px-4 py-3">{{ $report->created_at->format('M d, Y') }}</td>
                             <td class="px-4 py-3">
-                                <!-- View Report Link -->
-                                <a href="{{ route('reports.show', $report->id) }}" class="text-blue-400 hover:text-blue-300 mr-2">
+                                @php
+                                    $reportData = [
+                                        'id' => $report->id,
+                                        'name' => $report->name,
+                                        'generated_by' => $report->generated_by,
+                                        'description' => $report->description ?? '',
+                                        'created_at' => $report->created_at ? $report->created_at->format('M d, Y') : 'N/A',
+                                        'update_url' => route('reports.update', $report->id),
+                                    ];
+                                    $reportJson = htmlspecialchars(json_encode($reportData), ENT_QUOTES, 'UTF-8');
+                                @endphp
+                                <button type="button" onclick="openReportDetailModal({{ $reportJson }})" class="text-gray-300 hover:text-white mr-2">
                                     View
-                                </a>
+                                </button>
                                 
-                                <!-- Edit Report Link -->
-                                <a href="{{ route('reports.edit', $report->id) }}" class="text-blue-500 hover:text-blue-400 mr-2">
+                                <button type="button" onclick="openReportEditModal({{ $reportJson }})" class="text-blue-400 hover:text-blue-300 mr-2">
                                     Edit
-                                </a>
+                                </button>
                             
                                 <!-- Delete Report Form -->
-                                <form action="{{ route('reports.destroy', $report->id) }}" method="POST" style="display:inline;">
+                                <form action="{{ route('reports.destroy', $report->id) }}" method="POST" style="display:inline;" data-confirm="តើអ្នកពិតជាចង់លុបរបាយការណ៍ «{{ $report->name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបរបាយការណ៍">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-400 hover:text-red-300 bg-transparent border-0">
@@ -58,4 +67,6 @@
             </table>
         </div>
     </div>
+
+    @include('reports.partials.modals')
 @endsection

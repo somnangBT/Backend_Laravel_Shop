@@ -47,25 +47,6 @@
 
         <div data-live-region="slides">
 
-        <!-- Notifications -->
-        @if (session('success'))
-            <div class="bg-emerald-900/50 border-l-4 border-emerald-500 text-emerald-200 p-4 mb-6 rounded-r-lg flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-emerald-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('success') }}</span>
-            </div>
-        @endif
-
-        @if (session('error'))
-            <div class="bg-rose-900/50 border-l-4 border-rose-500 text-rose-200 p-4 mb-6 rounded-r-lg flex items-start">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-3 text-rose-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>{{ session('error') }}</span>
-            </div>
-        @endif
-
         <!-- Slides Table -->
         <div class="bg-gray-800/50 rounded-xl border border-gray-700/50 overflow-hidden shadow-xl mb-8">
             <div class="overflow-x-auto">
@@ -108,19 +89,42 @@
                                 <td class="py-3 px-4 text-gray-200 font-medium">{{ $slide->main_title }}</td>
                                 <td class="py-3 px-4 text-gray-300 max-w-xs truncate">{{ $slide->description }}</td>
                                 <td class="py-3 px-4">
+                                    @php
+                                        $resolveSlideImg = function ($val) {
+                                            return $val ? (filter_var($val, FILTER_VALIDATE_URL) ? $val : Storage::url($val)) : '/images/fallback.jpg';
+                                        };
+                                        $slideData = [
+                                            'id' => $slide->id,
+                                            'main_title' => $slide->main_title,
+                                            'description' => $slide->description ?? '',
+                                            'image1' => $slide->image1,
+                                            'image2' => $slide->image2,
+                                            'image3' => $slide->image3,
+                                            'image1_url' => $resolveSlideImg($slide->image1),
+                                            'image2_url' => $resolveSlideImg($slide->image2),
+                                            'image3_url' => $resolveSlideImg($slide->image3),
+                                            'image1_is_url' => (bool) filter_var($slide->image1, FILTER_VALIDATE_URL),
+                                            'image2_is_url' => (bool) filter_var($slide->image2, FILTER_VALIDATE_URL),
+                                            'image3_is_url' => (bool) filter_var($slide->image3, FILTER_VALIDATE_URL),
+                                            'update_url' => route('slide-heroes.update', $slide->id),
+                                            'created_at' => $slide->created_at ? $slide->created_at->format('M d, Y h:i A') : 'N/A',
+                                            'updated_at' => $slide->updated_at ? $slide->updated_at->format('M d, Y h:i A') : 'N/A',
+                                        ];
+                                        $slideJson = htmlspecialchars(json_encode($slideData), ENT_QUOTES, 'UTF-8');
+                                    @endphp
                                     <div class="flex gap-2">
-                                        <a href="{{ route('slide-heroes.show', $slide->id) }}" class="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-colors" title="View">
+                                        <button type="button" onclick="openSlideDetailModal({{ $slideJson }})" class="p-2 bg-gray-700/50 hover:bg-gray-700 text-gray-300 hover:text-white rounded-lg transition-all hover:scale-105" title="View">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
-                                        </a>
-                                        <a href="{{ route('slide-heroes.edit', $slide->id) }}" class="p-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 hover:text-cyan-300 rounded-lg transition-colors" title="Edit">
+                                        </button>
+                                        <button type="button" onclick="openSlideEditModal({{ $slideJson }})" class="p-2 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-400 hover:text-cyan-300 rounded-lg transition-all hover:scale-105" title="Edit">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                             </svg>
-                                        </a>
-                                        <form action="{{ route('slide-heroes.destroy', $slide->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this slide?');" class="inline">
+                                        </button>
+                                        <form action="{{ route('slide-heroes.destroy', $slide->id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុប Slide «{{ $slide->main_title }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុប Slide" class="inline">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="p-2 bg-rose-600/20 hover:bg-rose-600/40 text-rose-400 hover:text-rose-300 rounded-lg transition-colors" title="Delete">
@@ -157,6 +161,8 @@
         </div>
     </div>
 </div>
+
+@include('slide.partials.modals')
 
 <style>
     ::-webkit-scrollbar {

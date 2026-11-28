@@ -624,10 +624,383 @@
         .animate-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
+
+        /* Maintain crisp white text on solid rose/amber action buttons in Light Mode */
+        html:not(.dark) button.bg-rose-600,
+        html:not(.dark) button.bg-rose-500,
+        html:not(.dark) button.bg-rose-700,
+        html:not(.dark) a.bg-rose-600,
+        html:not(.dark) button.bg-amber-600,
+        html:not(.dark) button.bg-rose-600 *,
+        html:not(.dark) button.bg-rose-500 *,
+        html:not(.dark) a.bg-rose-600 * {
+            color: #ffffff !important;
+        }
+
+        /* Sleek Global Flash Toast Alerts */
+        @keyframes luckshopToastIn {
+            from { opacity: 0; transform: translate3d(18px, 0, 0) scale(0.96); }
+            to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+        }
+        @keyframes luckshopToastProgress {
+            from { transform: scaleX(1); }
+            to { transform: scaleX(0); }
+        }
+        @keyframes luckshopConfirmPop {
+            from { opacity: 0; transform: scale(0.94) translateY(8px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        #admin-flash-toasts {
+            position: fixed;
+            top: 76px;
+            right: 20px;
+            z-index: 95;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: min(390px, calc(100vw - 32px));
+            pointer-events: none;
+        }
+
+        .luckshop-toast {
+            pointer-events: auto;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 14px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            color: #f9fafb;
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.55);
+            animation: luckshopToastIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            transition: opacity 0.22s ease, transform 0.22s ease;
+        }
+        .luckshop-toast.is-leaving {
+            opacity: 0;
+            transform: translate3d(16px, 0, 0) scale(0.97);
+        }
+        html:not(.dark) .luckshop-toast {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 18px 36px -10px rgba(15, 23, 42, 0.14), 0 0 0 1px rgba(15, 23, 42, 0.04) !important;
+        }
+        .luckshop-toast-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 15px;
+        }
+        .luckshop-toast--success .luckshop-toast-icon {
+            background: rgba(16, 185, 129, 0.14);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.28);
+        }
+        .luckshop-toast--error .luckshop-toast-icon {
+            background: rgba(244, 63, 94, 0.14);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.28);
+        }
+        .luckshop-toast--warning .luckshop-toast-icon {
+            background: rgba(245, 158, 11, 0.14);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.28);
+        }
+        .luckshop-toast-title {
+            font-size: 13px;
+            font-weight: 700;
+            line-height: 1.3;
+        }
+        .luckshop-toast-msg {
+            font-size: 12.5px;
+            margin-top: 2px;
+            line-height: 1.45;
+            color: #cbd5e1;
+            word-break: break-word;
+        }
+        html:not(.dark) .luckshop-toast-msg {
+            color: #475569 !important;
+        }
+        .luckshop-toast-close {
+            margin-left: auto;
+            color: #64748b;
+            background: transparent;
+            border: 0;
+            padding: 2px 4px;
+            border-radius: 6px;
+            cursor: pointer;
+            line-height: 1;
+            font-size: 14px;
+            transition: color 0.15s ease, background-color 0.15s ease;
+        }
+        .luckshop-toast-close:hover {
+            color: #f8fafc;
+            background: rgba(148, 163, 184, 0.16);
+        }
+        html:not(.dark) .luckshop-toast-close:hover {
+            color: #0f172a !important;
+            background: #f1f5f9 !important;
+        }
+        .luckshop-toast-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 3px;
+            transform-origin: left center;
+            animation: luckshopToastProgress 4.8s linear forwards;
+        }
+        .luckshop-toast:hover .luckshop-toast-bar {
+            animation-play-state: paused;
+        }
+        .luckshop-toast--success .luckshop-toast-bar { background: linear-gradient(90deg, #10b981, #34d399); }
+        .luckshop-toast--error .luckshop-toast-bar { background: linear-gradient(90deg, #e11d48, #fb7185); }
+        .luckshop-toast--warning .luckshop-toast-bar { background: linear-gradient(90deg, #d97706, #fbbf24); }
+
+        /* Sleek Global Confirmation Modal */
+        #global-confirm-modal {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+        #global-confirm-modal.is-open {
+            display: flex;
+        }
+        .luckshop-confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 6, 23, 0.72);
+            backdrop-filter: blur(4px);
+        }
+        #global-confirm-card {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 420px;
+            border-radius: 18px;
+            background: #111827;
+            border: 1px solid #1f2937;
+            color: #f8fafc;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.65);
+            overflow: hidden;
+            animation: luckshopConfirmPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        html:not(.dark) #global-confirm-card {
+            background: #ffffff !important;
+            border-color: #e2e8f0 !important;
+            color: #0f172a !important;
+            box-shadow: 0 24px 48px -12px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.05) !important;
+        }
+        .luckshop-confirm-body {
+            padding: 24px 24px 20px;
+            text-align: center;
+        }
+        .luckshop-confirm-icon {
+            width: 52px;
+            height: 52px;
+            margin: 0 auto 14px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .luckshop-confirm-icon.is-danger {
+            background: rgba(244, 63, 94, 0.14);
+            color: #f43f5e;
+            border: 1px solid rgba(244, 63, 94, 0.28);
+        }
+        .luckshop-confirm-icon.is-success {
+            background: rgba(16, 185, 129, 0.14);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.28);
+        }
+        .luckshop-confirm-icon.is-primary {
+            background: rgba(var(--theme-color-rgb), 0.14);
+            color: var(--theme-color);
+            border: 1px solid rgba(var(--theme-color-rgb), 0.3);
+        }
+        #global-confirm-title {
+            font-size: 17px;
+            font-weight: 700;
+            line-height: 1.35;
+        }
+        #global-confirm-message {
+            margin-top: 8px;
+            font-size: 13.5px;
+            line-height: 1.55;
+            color: #cbd5e1;
+        }
+        html:not(.dark) #global-confirm-message {
+            color: #475569 !important;
+        }
+        #global-confirm-hint {
+            margin-top: 8px;
+            font-size: 11.5px;
+            color: #94a3b8;
+        }
+        .luckshop-confirm-footer {
+            display: flex;
+            gap: 10px;
+            padding: 14px 24px 20px;
+            background: rgba(15, 23, 42, 0.35);
+            border-top: 1px solid #1f2937;
+        }
+        html:not(.dark) .luckshop-confirm-footer {
+            background: #f8fafc !important;
+            border-top-color: #e2e8f0 !important;
+        }
+        .luckshop-confirm-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border-radius: 11px;
+            font-size: 13.5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .luckshop-confirm-cancel {
+            background: #1f2937;
+            color: #e2e8f0;
+            border: 1px solid #374151;
+        }
+        .luckshop-confirm-cancel:hover {
+            background: #374151;
+        }
+        html:not(.dark) .luckshop-confirm-cancel {
+            background: #ffffff !important;
+            color: #334155 !important;
+            border-color: #cbd5e1 !important;
+        }
+        html:not(.dark) .luckshop-confirm-cancel:hover {
+            background: #f1f5f9 !important;
+        }
+        .luckshop-confirm-ok--danger {
+            background: #e11d48 !important;
+            color: #ffffff !important;
+            border: 1px solid #be123c !important;
+            box-shadow: 0 6px 16px -4px rgba(225, 29, 72, 0.45);
+        }
+        .luckshop-confirm-ok--danger:hover { background: #be123c !important; }
+        .luckshop-confirm-ok--success {
+            background: #059669 !important;
+            color: #ffffff !important;
+            border: 1px solid #047857 !important;
+            box-shadow: 0 6px 16px -4px rgba(5, 150, 105, 0.45);
+        }
+        .luckshop-confirm-ok--success:hover { background: #047857 !important; }
+        .luckshop-confirm-ok--primary {
+            background-image: var(--theme-gradient) !important;
+            color: #ffffff !important;
+            border: 1px solid transparent !important;
+        }
     </style>
 </head>
 
 <body class="bg-gray-950 text-gray-100 font-sans">
+    <!-- Global Sleek Toast Alerts -->
+    <div id="admin-flash-toasts" aria-live="polite">
+        @if (session('success'))
+            <div class="luckshop-toast luckshop-toast--success" data-auto-toast="true" role="status">
+                <div class="luckshop-toast-icon"><i class="fas fa-check-circle"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="luckshop-toast-title">ជោគជ័យ (Success)</div>
+                    <div class="luckshop-toast-msg">{{ session('success') }}</div>
+                </div>
+                <button type="button" class="luckshop-toast-close" onclick="dismissAdminToast(this.closest('.luckshop-toast'))" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="luckshop-toast-bar"></div>
+            </div>
+        @endif
+
+        @if (session('error'))
+            <div class="luckshop-toast luckshop-toast--error" data-auto-toast="true" role="alert">
+                <div class="luckshop-toast-icon"><i class="fas fa-exclamation-circle"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="luckshop-toast-title">មានបញ្ហា (Error)</div>
+                    <div class="luckshop-toast-msg">{{ session('error') }}</div>
+                </div>
+                <button type="button" class="luckshop-toast-close" onclick="dismissAdminToast(this.closest('.luckshop-toast'))" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="luckshop-toast-bar"></div>
+            </div>
+        @endif
+
+        @if (session('warning'))
+            <div class="luckshop-toast luckshop-toast--warning" data-auto-toast="true" role="status">
+                <div class="luckshop-toast-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="luckshop-toast-title">ការជូនដំណឹង (Warning)</div>
+                    <div class="luckshop-toast-msg">{{ session('warning') }}</div>
+                </div>
+                <button type="button" class="luckshop-toast-close" onclick="dismissAdminToast(this.closest('.luckshop-toast'))" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="luckshop-toast-bar"></div>
+            </div>
+        @endif
+
+        @if (isset($errors) && $errors->any())
+            <div class="luckshop-toast luckshop-toast--error" data-auto-toast="true" role="alert">
+                <div class="luckshop-toast-icon"><i class="fas fa-times-circle"></i></div>
+                <div class="min-w-0 flex-1">
+                    <div class="luckshop-toast-title">ទិន្នន័យមិនត្រឹមត្រូវ (Validation Error)</div>
+                    <ul class="luckshop-toast-msg list-disc pl-4 mt-1 space-y-0.5">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+                <button type="button" class="luckshop-toast-close" onclick="dismissAdminToast(this.closest('.luckshop-toast'))" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+                <div class="luckshop-toast-bar"></div>
+            </div>
+        @endif
+    </div>
+
+    <!-- Global Sleek Confirmation Modal -->
+    <div id="global-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="global-confirm-title">
+        <div class="luckshop-confirm-backdrop" id="global-confirm-backdrop"></div>
+        <div id="global-confirm-card">
+            <div class="luckshop-confirm-body">
+                <div class="luckshop-confirm-icon is-danger" id="global-confirm-icon">
+                    <i class="fas fa-trash-alt"></i>
+                </div>
+                <h3 id="global-confirm-title">បញ្ជាក់ការលុបទិន្នន័យ</h3>
+                <p id="global-confirm-message">តើអ្នកពិតជាចង់លុបទិន្នន័យនេះមែនទេ?</p>
+                <p id="global-confirm-hint">សកម្មភាពនេះមិនអាចត្រឡប់ក្រោយវិញបានទេ។</p>
+            </div>
+            <div class="luckshop-confirm-footer">
+                <button type="button" id="global-confirm-cancel" class="luckshop-confirm-btn luckshop-confirm-cancel">
+                    បោះបង់ (Cancel)
+                </button>
+                <button type="button" id="global-confirm-ok" class="luckshop-confirm-btn luckshop-confirm-ok--danger">
+                    <i class="fas fa-trash-alt text-xs"></i>
+                    <span>បាទ/ចាស លុប</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div class="flex h-screen overflow-hidden">
         <!-- Sidebar -->
         <div id="sidebar" class="sidebar-expanded bg-sidebar text-sidebar-foreground relative shadow-lg">
@@ -1335,6 +1708,222 @@
             setInterval(pollLiveOrders, 5000);
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) pollLiveOrders();
+            });
+        })();
+
+        // Global Flash Toast Auto-Dismiss & Programmatic Helper
+        function dismissAdminToast(el) {
+            if (!el || el.dataset.dismissed === '1') return;
+            el.dataset.dismissed = '1';
+            el.classList.add('is-leaving');
+            setTimeout(() => {
+                if (el.parentNode) el.remove();
+            }, 240);
+        }
+
+        window.showAdminToast = function(message, type = 'success', customTitle = '') {
+            const wrap = document.getElementById('admin-flash-toasts');
+            if (!wrap) return;
+
+            const config = {
+                success: { title: customTitle || 'ជោគជ័យ (Success)', icon: 'fa-check-circle' },
+                error:   { title: customTitle || 'មានបញ្ហា (Error)', icon: 'fa-exclamation-circle' },
+                warning: { title: customTitle || 'ការជូនដំណឹង (Warning)', icon: 'fa-exclamation-triangle' }
+            }[type] || { title: customTitle || 'ជោគជ័យ (Success)', icon: 'fa-check-circle' };
+
+            const toast = document.createElement('div');
+            toast.className = `luckshop-toast luckshop-toast--${type}`;
+            toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
+
+            const iconBox = document.createElement('div');
+            iconBox.className = 'luckshop-toast-icon';
+            iconBox.innerHTML = `<i class="fas ${config.icon}"></i>`;
+
+            const contentBox = document.createElement('div');
+            contentBox.className = 'min-w-0 flex-1';
+            const titleEl = document.createElement('div');
+            titleEl.className = 'luckshop-toast-title';
+            titleEl.textContent = config.title;
+            const msgEl = document.createElement('div');
+            msgEl.className = 'luckshop-toast-msg';
+            msgEl.textContent = String(message || '');
+            contentBox.appendChild(titleEl);
+            contentBox.appendChild(msgEl);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.type = 'button';
+            closeBtn.className = 'luckshop-toast-close';
+            closeBtn.setAttribute('aria-label', 'Close');
+            closeBtn.innerHTML = '<i class="fas fa-times"></i>';
+            closeBtn.onclick = () => dismissAdminToast(toast);
+
+            const bar = document.createElement('div');
+            bar.className = 'luckshop-toast-bar';
+
+            toast.appendChild(iconBox);
+            toast.appendChild(contentBox);
+            toast.appendChild(closeBtn);
+            toast.appendChild(bar);
+            wrap.appendChild(toast);
+
+            bindToastAutoDismiss(toast);
+        };
+
+        function bindToastAutoDismiss(toast) {
+            let timer = null;
+            const startTimer = () => {
+                clearTimeout(timer);
+                timer = setTimeout(() => dismissAdminToast(toast), 4800);
+            };
+            toast.addEventListener('mouseenter', () => clearTimeout(timer));
+            toast.addEventListener('mouseleave', startTimer);
+            startTimer();
+        }
+
+        document.querySelectorAll('#admin-flash-toasts [data-auto-toast="true"]').forEach(bindToastAutoDismiss);
+
+        // Global Sleek Confirmation Modal Controller (replaces native browser confirm())
+        (function() {
+            const modal = document.getElementById('global-confirm-modal');
+            if (!modal) return;
+
+            const backdrop = document.getElementById('global-confirm-backdrop');
+            const iconBox = document.getElementById('global-confirm-icon');
+            const titleEl = document.getElementById('global-confirm-title');
+            const msgEl = document.getElementById('global-confirm-message');
+            const hintEl = document.getElementById('global-confirm-hint');
+            const cancelBtn = document.getElementById('global-confirm-cancel');
+            const okBtn = document.getElementById('global-confirm-ok');
+
+            let activeConfirmCallback = null;
+
+            function closeConfirmModal() {
+                modal.classList.remove('is-open');
+                activeConfirmCallback = null;
+            }
+
+            window.openAdminConfirm = function({
+                title = 'បញ្ជាក់ការលុបទិន្នន័យ',
+                message = 'តើអ្នកពិតជាចង់បន្តសកម្មភាពនេះមែនទេ?',
+                hint = '',
+                confirmText = 'បាទ/ចាស បន្ត',
+                variant = 'danger',
+                onConfirm = null
+            }) {
+                const isSuccess = variant === 'success';
+                const isPrimary = variant === 'primary';
+
+                iconBox.className = 'luckshop-confirm-icon ' + (isSuccess ? 'is-success' : isPrimary ? 'is-primary' : 'is-danger');
+                iconBox.innerHTML = isSuccess
+                    ? '<i class="fas fa-check-circle"></i>'
+                    : isPrimary
+                    ? '<i class="fas fa-question-circle"></i>'
+                    : '<i class="fas fa-trash-alt"></i>';
+
+                titleEl.textContent = title;
+                msgEl.textContent = message;
+                hintEl.textContent = hint || (isSuccess
+                    ? 'ការបញ្ជាទិញនឹងត្រូវបានអនុម័ត និងបន្តដំណើរការភ្លាមៗ។'
+                    : isPrimary
+                    ? 'សូមពិនិត្យមើលព័ត៌មានមុនពេលបន្ត។'
+                    : 'សកម្មភាពនេះមិនអាចត្រឡប់ក្រោយវិញបានទេ។');
+
+                okBtn.className = 'luckshop-confirm-btn ' + (isSuccess ? 'luckshop-confirm-ok--success' : isPrimary ? 'luckshop-confirm-ok--primary' : 'luckshop-confirm-ok--danger');
+                okBtn.innerHTML = (isSuccess
+                    ? '<i class="fas fa-check text-xs"></i>'
+                    : '<i class="fas fa-trash-alt text-xs"></i>') + `<span>${escapeConfirmText(confirmText)}</span>`;
+                okBtn.disabled = false;
+
+                activeConfirmCallback = onConfirm;
+                modal.classList.add('is-open');
+                setTimeout(() => cancelBtn.focus(), 20);
+            };
+
+            function escapeConfirmText(str) {
+                const div = document.createElement('div');
+                div.textContent = String(str || '');
+                return div.innerHTML;
+            }
+
+            okBtn.addEventListener('click', () => {
+                const cb = activeConfirmCallback;
+                if (typeof cb === 'function') {
+                    okBtn.disabled = true;
+                    closeConfirmModal();
+                    cb();
+                } else {
+                    closeConfirmModal();
+                }
+            });
+
+            cancelBtn.addEventListener('click', closeConfirmModal);
+            backdrop.addEventListener('click', closeConfirmModal);
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && modal.classList.contains('is-open')) {
+                    closeConfirmModal();
+                }
+            });
+
+            // Intercept form submissions with [data-confirm] on form or submitter
+            document.addEventListener('submit', (e) => {
+                const form = e.target;
+                if (!(form instanceof HTMLFormElement)) return;
+
+                if (form.dataset.confirmed === '1') {
+                    delete form.dataset.confirmed;
+                    return;
+                }
+
+                const submitter = e.submitter || null;
+                const trigger = (submitter && submitter.hasAttribute('data-confirm'))
+                    ? submitter
+                    : (form.hasAttribute('data-confirm') ? form : null);
+
+                if (!trigger) return;
+
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                const message = trigger.getAttribute('data-confirm') || 'តើអ្នកពិតជាចង់បន្តសកម្មភាពនេះមែនទេ?';
+                const variant = trigger.getAttribute('data-confirm-variant') || 'danger';
+                const title = trigger.getAttribute('data-confirm-title') || (variant === 'success' ? 'បញ្ជាក់ការអនុម័ត' : 'បញ្ជាក់ការលុបទិន្នន័យ');
+                const confirmText = trigger.getAttribute('data-confirm-ok') || (variant === 'success' ? 'បាទ/ចាស អនុម័ត' : 'បាទ/ចាស លុប');
+                const hint = trigger.getAttribute('data-confirm-hint') || '';
+
+                window.openAdminConfirm({
+                    title,
+                    message,
+                    hint,
+                    confirmText,
+                    variant,
+                    onConfirm: () => {
+                        form.dataset.confirmed = '1';
+                        if (typeof form.requestSubmit === 'function') {
+                            form.requestSubmit(submitter || undefined);
+                        } else {
+                            form.submit();
+                        }
+                    }
+                });
+            }, true);
+
+            // Intercept anchor/link elements with [data-confirm]
+            document.addEventListener('click', (e) => {
+                const link = e.target.closest('a[data-confirm]');
+                if (!link) return;
+                e.preventDefault();
+                const href = link.getAttribute('href');
+                const variant = link.getAttribute('data-confirm-variant') || 'danger';
+                window.openAdminConfirm({
+                    title: link.getAttribute('data-confirm-title') || 'បញ្ជាក់សកម្មភាព',
+                    message: link.getAttribute('data-confirm') || 'តើអ្នកពិតជាចង់បន្តមែនទេ?',
+                    hint: link.getAttribute('data-confirm-hint') || '',
+                    confirmText: link.getAttribute('data-confirm-ok') || 'បន្ត',
+                    variant,
+                    onConfirm: () => {
+                        if (href) window.location.href = href;
+                    }
+                });
             });
         })();
     </script>

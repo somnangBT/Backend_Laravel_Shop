@@ -168,7 +168,7 @@
                             </svg>
                             Edit Product
                         </a>
-                        <form action="{{ route('products.destroy', $product->pro_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                        <form action="{{ route('products.destroy', $product->pro_id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុបទំនិញ «{{ $product->pro_name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបទំនិញ">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="bg-rose-600 hover:bg-rose-700 text-white font-medium py-2.5 px-5 rounded-lg transition-all duration-200 flex items-center gap-2">

@@ -42,19 +42,33 @@
                             <td class="px-6 py-4 text-gray-300">{{ $project->start_date }}</td>
                             <td class="px-6 py-4 text-gray-300">{{ $project->end_date }}</td>
                             <td class="px-6 py-4">
-                                <!-- Edit Link -->
-                                <a href="{{ route('projects.edit', $project->id) }}" class="text-blue-400 hover:text-blue-300 font-medium mr-3" data-aos="zoom-in" data-aos-delay="500">
-                                    Edit
-                                </a>
-                            
-                                <!-- Delete Link (using a form to securely delete the project) -->
-                                <form action="{{ route('projects.destroy', $project->id) }}" method="POST" style="display:inline;" data-aos="zoom-in" data-aos-delay="600">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-red-400 hover:text-red-300 font-medium bg-transparent border-0">
-                                        Delete
+                                @php
+                                    $projectData = [
+                                        'id' => $project->id,
+                                        'name' => $project->name,
+                                        'description' => $project->description,
+                                        'status' => $project->status,
+                                        'start_date' => $project->start_date,
+                                        'end_date' => $project->end_date,
+                                        'update_url' => route('projects.update', $project->id),
+                                    ];
+                                    $projectJson = htmlspecialchars(json_encode($projectData), ENT_QUOTES, 'UTF-8');
+                                @endphp
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="openProjectDetailModal({{ $projectJson }})" class="text-gray-300 hover:text-white font-medium mr-2">
+                                        View
                                     </button>
-                                </form>
+                                    <button type="button" onclick="openProjectEditModal({{ $projectJson }})" class="text-blue-400 hover:text-blue-300 font-medium mr-2">
+                                        Edit
+                                    </button>
+                                    <form action="{{ route('projects.destroy', $project->id) }}" method="POST" style="display:inline;" data-confirm="តើអ្នកពិតជាចង់លុបគម្រោង «{{ $project->name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបគម្រោង">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="text-red-400 hover:text-red-300 font-medium bg-transparent border-0">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </div>
                             </td>
                             
                         </tr>
@@ -64,4 +78,5 @@
         </div>
     </div>
 
+    @include('projects.partials.modals')
 @endsection

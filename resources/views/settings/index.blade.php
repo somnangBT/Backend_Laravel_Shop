@@ -24,34 +24,7 @@
             </div>
         </div>
 
-        <!-- Notifications Alerts -->
-        @if (session('success'))
-            <div class="bg-emerald-950/60 border border-emerald-500/40 text-emerald-200 p-4 mb-6 rounded-xl flex items-center justify-between shadow-lg shadow-emerald-950/30 backdrop-blur-sm animate-fade-in">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
-                        <i class="fas fa-check-circle text-base"></i>
-                    </div>
-                    <span class="font-medium text-sm">{{ session('success') }}</span>
-                </div>
-                <button type="button" onclick="this.parentElement.remove()" class="text-emerald-400 hover:text-emerald-200 p-1">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-        @endif
-
-        @if (isset($errors) && $errors->any())
-            <div class="bg-rose-950/60 border border-rose-500/40 text-rose-200 p-4 mb-6 rounded-xl shadow-lg backdrop-blur-sm">
-                <div class="flex items-center gap-3 mb-2">
-                    <i class="fas fa-exclamation-triangle text-rose-400 text-lg"></i>
-                    <span class="font-semibold text-sm">Please correct the following errors:</span>
-                </div>
-                <ul class="ml-8 list-disc text-xs space-y-1 text-rose-300">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
-            </div>
-        @endif
+        <!-- Settings Layout -->
 
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             <!-- Settings Navigation Sidebar -->

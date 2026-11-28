@@ -6,20 +6,6 @@
 <div class="container mx-auto px-4 py-8 bg-gray-900 text-gray-100 min-h-screen">
     <h1 class="text-3xl font-bold mb-6" data-aos="fade-down">Employee List</h1>
 
-    <!-- Success Message -->
-    @if (session('success'))
-        <div class="bg-green-800 border border-green-600 text-green-200 px-4 py-3 rounded mb-6" data-aos="fade-up" data-aos-delay="100">
-            {{ session('success') }}
-        </div>
-    @endif
-
-    <!-- Error Message -->
-    @if (session('error'))
-        <div class="bg-red-800 border border-red-600 text-red-200 px-4 py-3 rounded mb-6" data-aos="fade-up" data-aos-delay="150">
-            {{ session('error') }}
-        </div>
-    @endif
-
     <!-- Add Employee Button -->
     <div class="mb-6" data-aos="fade-up" data-aos-delay="200">
         <a href="{{ route('employees.create') }}" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-xl transition duration-200 inline-flex items-center">
@@ -57,11 +43,27 @@
                             </span>
                         </td>
                         <td class="border border-gray-700 p-3 text-center">
+                            @php
+                                $empData = [
+                                    'id' => $employee->id,
+                                    'name' => $employee->name,
+                                    'position' => $employee->position,
+                                    'department' => $employee->department,
+                                    'status' => $employee->status,
+                                    'update_url' => route('employees.update', $employee->id),
+                                    'created_at' => $employee->created_at ? $employee->created_at->format('M d, Y') : 'N/A',
+                                    'updated_at' => $employee->updated_at ? $employee->updated_at->format('M d, Y') : 'N/A',
+                                ];
+                                $empJson = htmlspecialchars(json_encode($empData), ENT_QUOTES, 'UTF-8');
+                            @endphp
                             <div class="flex justify-center gap-2">
-                                <a href="{{ route('employees.edit', $employee->id) }}" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded transition duration-200">
+                                <button type="button" onclick="openEmployeeDetailModal({{ $empJson }})" class="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-1 px-3 rounded transition duration-200">
+                                    View
+                                </button>
+                                <button type="button" onclick="openEmployeeEditModal({{ $empJson }})" class="bg-blue-500 hover:bg-blue-600 text-white font-semibold py-1 px-3 rounded transition duration-200">
                                     Edit
-                                </a>
-                                <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this employee?');">
+                                </button>
+                                <form action="{{ route('employees.destroy', $employee->id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុបបុគ្គលិក «{{ $employee->name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបបុគ្គលិក">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded transition duration-200">
@@ -85,6 +87,8 @@
         {{ $employees->links('vendor.pagination.tailwind') }}
     </div>
 </div>
+
+@include('employees.partials.modals')
 @endsection
 
 @push('scripts')

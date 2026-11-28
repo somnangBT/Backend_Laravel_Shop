@@ -29,10 +29,25 @@
                         <td class="py-3 px-6 text-left">{{ $category->cat_id }}</td>
                         <td class="py-3 px-6 text-left">{{ $category->cat_name }}</td>
                         <td class="py-3 px-6 text-center">
-                            <div class="flex item-center justify-center space-x-2">
-                                <a href="{{ route('categories.show', $category->cat_id) }}" class="text-blue-500 hover:text-blue-700">View</a>
-                                <a href="{{ route('categories.edit', $category->cat_id) }}" class="text-blue-500 hover:text-blue-700">Edit</a>
-                                <a href="{{ route('categories.delete', $category->cat_id) }}" class="text-red-500 hover:text-red-700">Delete</a>
+                            @php
+                                $catData = [
+                                    'cat_id' => $category->cat_id,
+                                    'cat_name' => $category->cat_name,
+                                    'products_count' => $category->products()->count(),
+                                    'update_url' => route('categories.update', $category->cat_id),
+                                    'created_at' => $category->created_at ? $category->created_at->format('M d, Y h:i A') : 'N/A',
+                                    'updated_at' => $category->updated_at ? $category->updated_at->format('M d, Y h:i A') : 'N/A',
+                                ];
+                                $catJson = htmlspecialchars(json_encode($catData), ENT_QUOTES, 'UTF-8');
+                            @endphp
+                            <div class="flex item-center justify-center space-x-3">
+                                <button type="button" onclick="openCategoryDetailModal({{ $catJson }})" class="text-blue-500 hover:text-blue-700 font-medium">View</button>
+                                <button type="button" onclick="openCategoryEditModal({{ $catJson }})" class="text-cyan-500 hover:text-cyan-700 font-medium">Edit</button>
+                                <form action="{{ route('categories.destroy', $category->cat_id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុបប្រភេទទំនិញ «{{ $category->cat_name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបប្រភេទទំនិញ" class="inline">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-red-500 hover:text-red-700 font-medium bg-transparent border-0">Delete</button>
+                                </form>
                             </div>
                         </td>
                     </tr>
@@ -54,4 +69,6 @@
         Back to Categories
     </a>
 </div>
+
+@include('category.partials.modals')
 @endsection

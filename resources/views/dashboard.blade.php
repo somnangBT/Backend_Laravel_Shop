@@ -306,7 +306,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </button>
-                                    <form action="{{ route('products.destroy', $product->pro_id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this product?');">
+                                    <form action="{{ route('products.destroy', $product->pro_id) }}" method="POST" data-confirm="តើអ្នកពិតជាចង់លុបទំនិញ «{{ $product->pro_name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបទំនិញ">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="p-2 bg-rose-600/10 hover:bg-rose-600/20 text-rose-400 rounded-md transition-colors" title="Delete">

@@ -35,7 +35,7 @@
                                     Edit
                                 </a>
                                 <!-- Delete Link (using a form to securely delete the position) -->
-                                <form action="{{ route('positions.destroy', $position->id) }}" method="POST" style="display:inline;" data-aos="zoom-in" data-aos-delay="600" onsubmit="return confirm('Are you sure you want to delete this position?');">
+                                <form action="{{ route('positions.destroy', $position->id) }}" method="POST" style="display:inline;" data-aos="zoom-in" data-aos-delay="600" data-confirm="តើអ្នកពិតជាចង់លុបតួនាទី «{{ $position->name }}» មែនទេ?" data-confirm-title="បញ្ជាក់ការលុបតួនាទី">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="text-red-400 hover:text-red-300 font-medium bg-transparent border-0">
