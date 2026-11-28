@@ -28,6 +28,7 @@ class Order extends Model
         'bakong_ref',
         'shipping_address',
         'phone',
+        'telegram_message_id',
     ];
 
     /**

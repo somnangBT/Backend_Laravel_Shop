@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Schema;
 
 class OrderController extends Controller
 {
@@ -166,6 +167,7 @@ class OrderController extends Controller
         ]);
 
         $previousStatus = $order->status;
+        $previousPaymentStatus = $order->payment_status;
 
         DB::transaction(function () use ($request, $order, $validated, $previousStatus) {
             if ($request->filled('status')) {
@@ -198,8 +200,11 @@ class OrderController extends Controller
             }
         });
 
-        if ($request->filled('status') && $order->status !== $previousStatus && in_array($order->status, ['preparing', 'delivering', 'completed'])) {
-            $this->sendTelegramApprovalNotification($order, 'Admin Panel');
+        $statusChanged = $request->filled('status') && $order->status !== $previousStatus;
+        $paymentChanged = $request->filled('payment_status') && $order->payment_status !== $previousPaymentStatus;
+
+        if (($statusChanged && in_array($order->status, ['preparing', 'delivering', 'completed', 'cancelled'])) || $paymentChanged) {
+            $this->syncTelegramOrderMessage($order, null, null, 'Admin Panel', false);
         }
 
         if ($request->expectsJson() || $request->wantsJson()) {
@@ -226,7 +231,7 @@ class OrderController extends Controller
         $order->status = 'delivering';
         $order->save();
 
-        $this->sendTelegramApprovalNotification($order, 'Admin Approval');
+        $this->syncTelegramOrderMessage($order, null, null, 'Admin Approval', false);
 
         if ($request->expectsJson() || $request->wantsJson()) {
             return response()->json([
@@ -309,31 +314,77 @@ class OrderController extends Controller
             return response()->json(['ok' => false, 'message' => 'Forbidden chat'], 403);
         }
 
+        $targetStatus = null;
+        $markPaid = false;
+        $orderId = null;
+
         if (str_starts_with($data, 'approve_delivery_')) {
             $orderId = (int) str_replace('approve_delivery_', '', $data);
+            $targetStatus = 'delivering';
+            $markPaid = true;
+        } elseif (preg_match('/^order_status_(\d+)_(preparing|delivering|completed)$/', $data, $matches)) {
+            $orderId = (int) $matches[1];
+            $targetStatus = $matches[2];
+        }
+
+        if ($orderId && $targetStatus) {
             $order = Order::find($orderId);
 
             if ($order) {
-                $order->payment_status = 'paid';
-                $order->status = 'delivering';
+                $adminName = $callback['from']['first_name'] ?? 'Admin';
+
+                if ($order->status === 'cancelled') {
+                    if ($token && $callbackId) {
+                        Http::timeout(3)->post("https://api.telegram.org/bot{$token}/answerCallbackQuery", [
+                            'callback_query_id' => $callbackId,
+                            'text' => "❌ Order #{$order->id} ត្រូវបានបោះបង់រួចហើយ!",
+                            'show_alert' => false,
+                        ]);
+                    }
+                    $this->syncTelegramOrderMessage(
+                        $order,
+                        null,
+                        null,
+                        'Already Cancelled',
+                        false,
+                        $messageId ? (int) $messageId : null
+                    );
+                    return response()->json(['ok' => true]);
+                }
+
+                if ($markPaid) {
+                    $order->payment_status = 'paid';
+                }
+                $order->status = $targetStatus;
+                if ($messageId && Schema::hasColumn('orders', 'telegram_message_id') && empty($order->telegram_message_id)) {
+                    $order->telegram_message_id = (int) $messageId;
+                }
                 $order->save();
 
+                $toastLabel = match ($targetStatus) {
+                    'preparing' => '📦 កំពុងវេចខ្ចប់ (Packing)',
+                    'delivering' => $markPaid ? '✅ បានអនុម័ត & កំពុងដឹកជញ្ជូន!' : '🛵 កំពុងដឹកជញ្ជូន (Delivering)',
+                    'completed' => '✅ ដឹកជញ្ជូនជោគជ័យ (Completed)!',
+                    default => strtoupper($targetStatus),
+                };
+
                 if ($token && $callbackId) {
-                    Http::post("https://api.telegram.org/bot{$token}/answerCallbackQuery", [
+                    Http::timeout(3)->post("https://api.telegram.org/bot{$token}/answerCallbackQuery", [
                         'callback_query_id' => $callbackId,
-                        'text' => "✅ បានអនុម័ត Order #{$order->id} សម្រាប់ដឹកជញ្ជូន!",
-                        'show_alert' => true,
+                        'text' => "Order #{$order->id}: {$toastLabel}",
+                        'show_alert' => false,
                     ]);
                 }
 
-                if ($token && $chatId && $messageId) {
-                    $adminName = $callback['from']['first_name'] ?? 'Admin';
-                    Http::post("https://api.telegram.org/bot{$token}/sendMessage", [
-                        'chat_id' => $chatId,
-                        'reply_to_message_id' => $messageId,
-                        'text' => "✅ Order #{$order->id} ត្រូវបាន {$adminName} អនុម័តរួចរាល់!\n💳 Payment: PAID\n🛵 Delivery: កំពុងដឹកជញ្ជូន (Delivering)",
-                    ]);
-                }
+                // Edit the original Telegram order message in-place instead of sending a new reply alert
+                $this->syncTelegramOrderMessage(
+                    $order,
+                    null,
+                    null,
+                    $adminName,
+                    false,
+                    $messageId ? (int) $messageId : null
+                );
             }
         }
 
@@ -495,6 +546,7 @@ class OrderController extends Controller
                 return ['error' => 'Cannot cancel an order that is already completed or in delivery', 'code' => 400];
             }
 
+            $wasCancelled = false;
             if ($order->status !== 'cancelled') {
                 foreach ($order->orderItems as $item) {
                     if ($item->product_id && $item->quantity > 0) {
@@ -503,9 +555,10 @@ class OrderController extends Controller
                 }
                 $order->status = 'cancelled';
                 $order->save();
+                $wasCancelled = true;
             }
 
-            return ['order' => $order];
+            return ['order' => $order, 'was_cancelled' => $wasCancelled];
         });
 
         if (isset($txResult['error'])) {
@@ -513,6 +566,10 @@ class OrderController extends Controller
                 'status' => 'error',
                 'message' => $txResult['error'],
             ], $txResult['code']);
+        }
+
+        if (!empty($txResult['was_cancelled'])) {
+            $this->syncTelegramOrderMessage($txResult['order'], null, null, 'Customer Cancelled', false);
         }
 
         return response()->json([
@@ -788,8 +845,8 @@ class OrderController extends Controller
 
             $order = $txResult['order'];
 
-            // ៤. ផ្ញើសារទៅកាន់ Telegram Bot
-            $this->sendTelegramOrderNotification($order, $verifiedItems, $bakongSender);
+            // ៤. ផ្ញើសារទៅកាន់ Telegram Bot (១ Order = ១ សារ រក្សាទុក message_id សម្រាប់កែដដែល)
+            $this->syncTelegramOrderMessage($order, $verifiedItems, $bakongSender, null, true);
 
             // ៥. បញ្ជូនលទ្ធផលជោគជ័យត្រឡប់ទៅ React វិញ
             return response()->json([
@@ -1060,10 +1117,17 @@ class OrderController extends Controller
     }
 
     /**
-     * Send rich Telegram Bot notification for new orders (supports KHQR proof & inline admin link).
+     * Send or update the single unified Telegram message for an order (1 order = 1 message).
+     * Edits the existing message in-place via editMessageText whenever telegram_message_id is known.
      */
-    private function sendTelegramOrderNotification(Order $order, array $items = [], ?string $bakongSender = null): void
-    {
+    private function syncTelegramOrderMessage(
+        Order $order,
+        ?array $items = null,
+        ?string $bakongSender = null,
+        ?string $updatedBy = null,
+        bool $allowFallbackSend = true,
+        ?int $knownMessageId = null
+    ): void {
         try {
             $token = config('services.telegram.bot_token') ?: env('TELEGRAM_BOT_TOKEN');
             $chatId = config('services.telegram.chat_id') ?: env('TELEGRAM_CHAT_ID');
@@ -1073,104 +1137,47 @@ class OrderController extends Controller
                 return;
             }
 
-            $productList = "";
-            foreach ($items as $index => $item) {
-                $name = $item['name'] ?? ('Product #' . ($item['product_id'] ?? ''));
-                $qty = (int)($item['quantity'] ?? 1);
-                $itemTotal = ((float)($item['price'] ?? 0)) * $qty;
-                $productList .= ($index + 1) . ". {$name} (x{$qty}) - $" . number_format($itemTotal, 2) . "\n";
+            $payload = $this->buildTelegramOrderPayload($order, $items, $bakongSender, $updatedBy);
+            $payload['chat_id'] = $chatId;
+
+            $hasMsgIdCol = Schema::hasColumn('orders', 'telegram_message_id');
+            $existingMessageId = $knownMessageId ?: ($hasMsgIdCol ? (int) ($order->telegram_message_id ?? 0) : 0);
+
+            if ($existingMessageId > 0) {
+                $editPayload = $payload;
+                $editPayload['message_id'] = $existingMessageId;
+
+                $response = Http::timeout(4)->post("https://api.telegram.org/bot{$token}/editMessageText", $editPayload);
+                if ($response->successful()) {
+                    return;
+                }
+
+                $body = $response->body();
+                // Telegram returns 400 if text & markup are identical — already synced, nothing to do
+                if (str_contains($body, 'message is not modified')) {
+                    return;
+                }
+
+                Log::warning('Telegram editMessageText failed: ' . $body);
+
+                // Only resend if explicitly allowed (e.g. deleted message recovery), never spam on routine updates
+                if (!$allowFallbackSend) {
+                    return;
+                }
+            } elseif (!$allowFallbackSend) {
+                return;
             }
 
-            $customerName = $order->customer_name ?: (optional($order->user)->name ?? 'អតិថិជនទូទៅ (Guest)');
-            $isAbaDirect = $order->payment_method === 'aba_khqr';
-            $isKhqr = in_array($order->payment_method, ['khqr', 'aba_khqr', 'bakong_aba']);
-            $abaAccount = config('services.bakong.aba_account', '007842694');
-            $bakongId = config('services.bakong.account_id', 'somnang_yorn@bkrt');
-
-            if ($isAbaDirect) {
-                $paymentMethodLabel = "🏦 ABA Direct KHQR (YORN SOMNANG • {$abaAccount})";
-            } elseif ($isKhqr) {
-                $paymentMethodLabel = "⚡ Bakong KHQR ({$bakongId})";
-            } else {
-                $paymentMethodLabel = '💵 សាច់ប្រាក់សុទ្ធ (Cash on Delivery)';
-            }
-
-            if ($order->payment_status === 'paid' && $order->bakong_ref) {
-                $paymentStatusText = "✅ បង់លុយពិតរួចរាល់ (Bakong Verified)\n🧾 Ref: {$order->bakong_ref}" . ($bakongSender ? "\n🏦 ផ្ញើពី: {$bakongSender}" : "");
-            } elseif ($order->payment_status === 'awaiting_approval') {
-                $dest = $isAbaDirect ? "ABA {$abaAccount}" : "Bakong {$bakongId}";
-                $paymentStatusText = "🧾 អតិថិជនបានបង់លុយចូល {$dest} (រង់ចាំ Admin ពិនិត្យ Approve)"
-                    . ($order->bakong_ref ? "\n🔖 យោង/អ្នកផ្ញើ: {$order->bakong_ref}" : "");
-            } elseif ($order->payment_status === 'paid') {
-                $paymentStatusText = "✅ Already Paid (បានបង់ប្រាក់រួចរាល់)"
-                    . ($order->bakong_ref ? "\n🔖 យោង: {$order->bakong_ref}" : "");
-            } else {
-                $paymentStatusText = $isKhqr
-                    ? "⏳ Not Paid Yet (មិនទាន់បង់ប្រាក់ — រង់ចាំផ្ទៀងផ្ទាត់ KHQR)"
-                    : "⏳ Not Paid Yet (💵 ទូទាត់ពេលដឹក)";
-            }
-
-            $requestedAt = ($order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
-            $paymentWhen = ($order->updated_at ?? $order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
-            $phone = $order->phone ?: 'មិនទាន់បញ្ជាក់';
-            $address = $order->shipping_address ?: 'ភ្នំពេញ';
-            $totalUSD = number_format((float)$order->total, 2);
-            $totalKHR = number_format((float)$order->total * 4100);
-            $adminBase = rtrim(config('app.url') ?: env('APP_URL', 'https://backend-laravel-shop.vercel.app'), '/');
-            $adminUrl = "{$adminBase}/orders?payment_status=paid_pending_approval";
-
-            $headerLine = ($order->payment_status === 'paid')
-                ? "🎉 ភ្ញៀវបានបង់លុយរួចរាល់ (Request #{$order->id})!\n✅ Already Paid — រង់ចាំ Admin Approve ដើម្បីដឹកជញ្ជូន\n\n"
-                : "🛒 មានសំណើបញ្ជាទិញថ្មី (Request #{$order->id})!\n⏳ ស្ថានភាព: PENDING — រង់ចាំការពិនិត្យ\n\n";
-
-            $message = $headerLine
-                     . "👤 អតិថិជន: {$customerName}\n"
-                     . "📞 ទូរស័ព្ទ: {$phone}\n"
-                     . "📍 ទីតាំងដឹក: {$address}\n"
-                     . "🕒 ពេលវេលាស្នើទិញ: {$requestedAt}\n"
-                     . "💳 តាមរយៈ (Via): {$paymentMethodLabel}\n"
-                     . "📌 ស្ថានភាពបង់ប្រាក់: {$paymentStatusText}\n"
-                     . (in_array($order->payment_status, ['paid', 'awaiting_approval']) ? "⏱ ពេលវេលាបង់/ផ្ញើសំណើ: {$paymentWhen}\n" : "")
-                     . "\n"
-                     . "📦 ទំនិញដែលបានទិញ:\n"
-                     . $productList
-                     . "\n💰 សរុបទឹកប្រាក់: \${$totalUSD} = ({$totalKHR} ៛)\n";
-
-            if ($order->payment_proof) {
-                $message .= "🖼 រូបវិក្កយបត្រ: {$order->payment_proof}\n";
-            }
-
-            $message .= "\n👉 ចូលពិនិត្យ & Approve ដឹកជញ្ជូន: {$adminUrl}";
-
-            $payload = [
-                'chat_id' => $chatId,
-                'text' => $message,
-            ];
-
-            // Inline button (Works seamlessly with HTTPS admin URL; Approve callback works if webhook is set)
-            if (str_starts_with($adminUrl, 'https://')) {
-                $payload['reply_markup'] = json_encode([
-                    'inline_keyboard' => [
-                        [
-                            ['text' => '✅ Approve & ដឹកជញ្ជូន', 'callback_data' => "approve_delivery_{$order->id}"],
-                            ['text' => '🔗 បើក Admin Panel', 'url' => $adminUrl],
-                        ],
-                    ],
-                ]);
-            }
-
-            $response = Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendMessage", $payload);
+            $response = Http::timeout(4)->post("https://api.telegram.org/bot{$token}/sendMessage", $payload);
             if (!$response->successful()) {
                 Log::error('Telegram API sendMessage Failed: ' . $response->body());
+                return;
             }
 
-            // Send receipt slip photo directly into Telegram chat if attached
-            if ($order->payment_proof) {
-                Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendPhoto", [
-                    'chat_id' => $chatId,
-                    'photo' => $order->payment_proof,
-                    'caption' => "🧾 វិក្កយបត្របង់ប្រាក់សម្រាប់ Order #{$order->id} (\${$totalUSD}) — {$customerName}",
-                ]);
+            $sentMessageId = (int) ($response->json('result.message_id') ?? 0);
+            if ($sentMessageId > 0 && $hasMsgIdCol) {
+                Order::where('id', $order->id)->update(['telegram_message_id' => $sentMessageId]);
+                $order->telegram_message_id = $sentMessageId;
             }
         } catch (\Exception $e) {
             Log::error('Telegram notification error: ' . $e->getMessage());
@@ -1178,51 +1185,177 @@ class OrderController extends Controller
     }
 
     /**
-     * Notify Telegram Bot when Admin approves or updates an order status for delivery.
+     * Build the single live Telegram order card payload (message text, slip link preview, and status buttons).
      */
-    private function sendTelegramApprovalNotification(Order $order, string $source = 'Admin Panel'): void
-    {
-        try {
-            $token = config('services.telegram.bot_token') ?: env('TELEGRAM_BOT_TOKEN');
-            $chatId = config('services.telegram.chat_id') ?: env('TELEGRAM_CHAT_ID');
-            if (empty($token) || empty($chatId)) {
-                return;
-            }
-
-            $customerName = $order->customer_name ?: (optional($order->user)->name ?? 'Customer');
-            $statusEmoji = match ($order->status) {
-                'preparing' => '📦 កំពុងវេចខ្ចប់ទំនិញ (Packing)',
-                'delivering' => '🛵 កំពុងដឹកជញ្ជូន (Delivering)',
-                'completed' => '✅ ដឹកជញ្ជូនជោគជ័យ (Completed)',
-                default => strtoupper($order->status),
-            };
-            $viaChannel = match ($order->payment_method) {
-                'aba_khqr' => 'ABA KHQR',
-                'khqr', 'bakong_aba' => 'Bakong KHQR',
-                default => strtoupper($order->payment_method ?: 'Cash (COD)'),
-            };
-            $paidLabel = match ($order->payment_status) {
-                'paid' => '✅ Already Paid (បង់រួច)',
-                'awaiting_approval' => '🧾 Paid Claimed (Verify)',
-                'refunded' => '↩️ Refunded',
-                default => '⏳ Not Paid Yet',
-            };
-            $when = ($order->updated_at ?? $order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
-
-            $text = "📢 បច្ចុប្បន្នភាព Request #{$order->id} ({$source})\n"
-                  . "👤 អតិថិជន: {$customerName} ({$order->phone})\n"
-                  . "💳 ការបង់ប្រាក់: {$paidLabel}\n"
-                  . "🏦 តាមរយៈ (Via): {$viaChannel}\n"
-                  . "🕒 ពេលវេលា: {$when}\n"
-                  . "🚚 ស្ថានភាពថ្មី: {$statusEmoji}\n"
-                  . "💰 តម្លៃសរុប: \$" . number_format((float)$order->total, 2);
-
-            Http::timeout(3)->post("https://api.telegram.org/bot{$token}/sendMessage", [
-                'chat_id' => $chatId,
-                'text' => $text,
-            ]);
-        } catch (\Exception $e) {
-            Log::warning('Telegram approval notify error: ' . $e->getMessage());
+    private function buildTelegramOrderPayload(
+        Order $order,
+        ?array $items = null,
+        ?string $bakongSender = null,
+        ?string $updatedBy = null
+    ): array {
+        if (empty($items)) {
+            $order->loadMissing(['orderItems.product', 'user']);
+            $items = $order->orderItems->map(function ($orderItem) {
+                return [
+                    'product_id' => $orderItem->product_id,
+                    'name' => optional($orderItem->product)->pro_name ?? ('Product #' . $orderItem->product_id),
+                    'quantity' => (int) ($orderItem->quantity ?? 1),
+                    'price' => (float) ($orderItem->price ?? 0),
+                ];
+            })->all();
+        } else {
+            $order->loadMissing('user');
         }
+
+        $productList = "";
+        foreach ($items as $index => $item) {
+            $name = $item['name'] ?? ('Product #' . ($item['product_id'] ?? ''));
+            $qty = (int) ($item['quantity'] ?? 1);
+            $itemTotal = ((float) ($item['price'] ?? 0)) * $qty;
+            $productList .= ($index + 1) . ". {$name} (x{$qty}) - $" . number_format($itemTotal, 2) . "\n";
+        }
+
+        $customerName = $order->customer_name ?: (optional($order->user)->name ?? 'អតិថិជនទូទៅ (Guest)');
+        $isAbaDirect = $order->payment_method === 'aba_khqr';
+        $isKhqr = in_array($order->payment_method, ['khqr', 'aba_khqr', 'bakong_aba']);
+        $abaAccount = config('services.bakong.aba_account', '007842694');
+        $bakongId = config('services.bakong.account_id', 'somnang_yorn@bkrt');
+
+        if ($isAbaDirect) {
+            $paymentMethodLabel = "🏦 ABA Direct KHQR (YORN SOMNANG • {$abaAccount})";
+        } elseif ($isKhqr) {
+            $paymentMethodLabel = "⚡ Bakong KHQR ({$bakongId})";
+        } else {
+            $paymentMethodLabel = '💵 សាច់ប្រាក់សុទ្ធ (Cash on Delivery)';
+        }
+
+        if ($order->payment_status === 'paid' && $order->bakong_ref) {
+            $paymentStatusText = "✅ បង់លុយពិតរួចរាល់ (Bakong Verified)\n🧾 Ref: {$order->bakong_ref}" . ($bakongSender ? "\n🏦 ផ្ញើពី: {$bakongSender}" : "");
+        } elseif ($order->payment_status === 'awaiting_approval') {
+            $dest = $isAbaDirect ? "ABA {$abaAccount}" : "Bakong {$bakongId}";
+            $paymentStatusText = "🧾 អតិថិជនបានបង់លុយចូល {$dest} (រង់ចាំ Admin ពិនិត្យ Approve)"
+                . ($order->bakong_ref ? "\n🔖 យោង/អ្នកផ្ញើ: {$order->bakong_ref}" : "");
+        } elseif ($order->payment_status === 'paid') {
+            $paymentStatusText = "✅ Already Paid (បានបង់ប្រាក់រួចរាល់)"
+                . ($order->bakong_ref ? "\n🔖 យោង: {$order->bakong_ref}" : "");
+        } elseif ($order->payment_status === 'refunded') {
+            $paymentStatusText = "↩️ Refunded (បានសងប្រាក់វិញ)";
+        } else {
+            $paymentStatusText = $isKhqr
+                ? "⏳ Not Paid Yet (មិនទាន់បង់ប្រាក់ — រង់ចាំផ្ទៀងផ្ទាត់ KHQR)"
+                : "⏳ Not Paid Yet (💵 ទូទាត់ពេលដឹក)";
+        }
+
+        $status = $order->status ?: 'pending';
+        $headerLine = match ($status) {
+            'preparing' => "📦 កំពុងវេចខ្ចប់ទំនិញ (Request #{$order->id})\n📌 ស្ថានភាព: PACKING — កំពុងរៀបចំទំនិញ",
+            'delivering' => "🛵 កំពុងដឹកជញ្ជូន (Request #{$order->id})\n📌 ស្ថានភាព: DELIVERING — អ្នកដឹកកំពុងចេញដំណើរ",
+            'completed' => "✅ ដឹកជញ្ជូនជោគជ័យ (Request #{$order->id})\n📌 ស្ថានភាព: COMPLETED (Done)",
+            'cancelled' => "❌ ការបញ្ជាទិញត្រូវបានបោះបង់ (Request #{$order->id})\n📌 ស្ថានភាព: CANCELLED",
+            default => ($order->payment_status === 'paid')
+                ? "🎉 ភ្ញៀវបានបង់លុយរួចរាល់ (Request #{$order->id})!\n📌 ស្ថានភាព: ✅ Already Paid — រង់ចាំ Admin Approve"
+                : "🛒 មានសំណើបញ្ជាទិញថ្មី (Request #{$order->id})!\n📌 ស្ថានភាព: ⏳ PENDING — រង់ចាំការពិនិត្យ",
+        };
+
+        $progressLine = match ($status) {
+            'preparing' => '🔄 ដំណើរការ: Pending ✓ → [📦 Packing] → Delivering → Done',
+            'delivering' => '🔄 ដំណើរការ: Pending ✓ → Packing ✓ → [🛵 Delivering] → Done',
+            'completed' => '🔄 ដំណើរការ: Pending ✓ → Packing ✓ → Delivering ✓ → [✅ Done]',
+            'cancelled' => '🔄 ដំណើរការ: ❌ Cancelled',
+            default => '🔄 ដំណើរការ: [⏳ Pending] → Packing → Delivering → Done',
+        };
+
+        $requestedAt = ($order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
+        $updatedAt = ($order->updated_at ?? $order->created_at ?? now())->timezone('Asia/Phnom_Penh')->format('d M Y, h:i A');
+        $phone = $order->phone ?: 'មិនទាន់បញ្ជាក់';
+        $address = $order->shipping_address ?: 'ភ្នំពេញ';
+        $totalUSD = number_format((float) $order->total, 2);
+        $totalKHR = number_format((float) $order->total * 4100);
+        $adminBase = rtrim(config('app.url') ?: env('APP_URL', 'https://backend-laravel-shop.vercel.app'), '/');
+        $adminUrl = "{$adminBase}/orders" . ($status === 'pending' ? '?payment_status=paid_pending_approval' : '');
+
+        $proofDisplayUrl = null;
+        if (!empty($order->payment_proof)) {
+            $proofDisplayUrl = preg_match('#^https?://#i', $order->payment_proof)
+                ? $order->payment_proof
+                : "{$adminBase}/" . ltrim($order->payment_proof, '/');
+        }
+
+        $message = "{$headerLine}\n{$progressLine}\n\n"
+                 . "👤 អតិថិជន: {$customerName}\n"
+                 . "📞 ទូរស័ព្ទ: {$phone}\n"
+                 . "📍 ទីតាំងដឹក: {$address}\n"
+                 . "🕒 ពេលវេលាស្នើទិញ: {$requestedAt}\n";
+
+        if ($status !== 'pending' || $updatedBy) {
+            $message .= "⏱ បច្ចុប្បន្នភាពចុងក្រោយ: {$updatedAt}" . ($updatedBy ? " ({$updatedBy})" : "") . "\n";
+        }
+
+        $message .= "💳 តាមរយៈ (Via): {$paymentMethodLabel}\n"
+                  . "💰 ការបង់ប្រាក់: {$paymentStatusText}\n\n"
+                  . "📦 ទំនិញដែលបានទិញ:\n"
+                  . ($productList ?: "- មិនមានទិន្នន័យទំនិញ\n")
+                  . "\n💵 សរុបទឹកប្រាក់: \${$totalUSD} = ({$totalKHR} ៛)\n";
+
+        if ($proofDisplayUrl) {
+            $message .= "🖼 រូបវិក្កយបត្រ: {$proofDisplayUrl}\n";
+        }
+
+        $message .= "\n👉 Admin Panel: {$adminUrl}";
+
+        // Guard Telegram's 4096-character sendMessage/editMessageText limit
+        if (mb_strlen($message, 'UTF-8') > 4000) {
+            $message = mb_substr($message, 0, 3980, 'UTF-8') . "\n…";
+        }
+
+        $needsPaymentApproval = $isKhqr && $order->payment_status !== 'paid';
+        $buttons = [];
+        if ($status === 'pending') {
+            $buttons[] = [
+                ['text' => '📦 Packing', 'callback_data' => "order_status_{$order->id}_preparing"],
+                [
+                    'text' => $needsPaymentApproval ? '✅ Approve & ដឹក' : '🛵 ដឹកជញ្ជូន',
+                    'callback_data' => $needsPaymentApproval
+                        ? "approve_delivery_{$order->id}"
+                        : "order_status_{$order->id}_delivering",
+                ],
+            ];
+        } elseif ($status === 'preparing') {
+            $buttons[] = [
+                [
+                    'text' => $needsPaymentApproval ? '✅ Approve & ដឹកជញ្ជូន' : '🛵 ចេញដឹកជញ្ជូន (Delivering)',
+                    'callback_data' => $needsPaymentApproval
+                        ? "approve_delivery_{$order->id}"
+                        : "order_status_{$order->id}_delivering",
+                ],
+            ];
+        } elseif ($status === 'delivering') {
+            $buttons[] = [
+                ['text' => '✅ រួចរាល់ (Completed)', 'callback_data' => "order_status_{$order->id}_completed"],
+            ];
+        }
+
+        if (str_starts_with($adminUrl, 'https://')) {
+            $buttons[] = [
+                ['text' => '🔗 បើក Admin Panel', 'url' => $adminUrl],
+            ];
+        }
+
+        $payload = [
+            'text' => $message,
+            'reply_markup' => json_encode(['inline_keyboard' => $buttons]),
+        ];
+
+        // Embed receipt photo preview right inside the single order message instead of sending a 2nd photo ping
+        if ($proofDisplayUrl && str_starts_with($proofDisplayUrl, 'https://')) {
+            $payload['link_preview_options'] = json_encode([
+                'is_disabled' => false,
+                'url' => $proofDisplayUrl,
+                'prefer_large_media' => true,
+                'show_above_text' => true,
+            ]);
+        }
+
+        return $payload;
     }
 }

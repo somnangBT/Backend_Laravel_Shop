@@ -48,6 +48,20 @@ class AppServiceProvider extends ServiceProvider
                         }
                     }
                 }
+
+                $ordersTgCacheKey = 'schema_orders_has_telegram_msg_id_v1';
+                if (!Cache::get($ordersTgCacheKey)) {
+                    if (Schema::hasTable('orders')) {
+                        if (!Schema::hasColumn('orders', 'telegram_message_id')) {
+                            Schema::table('orders', function ($table) {
+                                $table->unsignedBigInteger('telegram_message_id')->nullable();
+                            });
+                        }
+                        if (Schema::hasColumn('orders', 'telegram_message_id')) {
+                            Cache::forever($ordersTgCacheKey, true);
+                        }
+                    }
+                }
             } catch (\Throwable $e) {
                 // Skip silently if DB is not ready yet
             }
