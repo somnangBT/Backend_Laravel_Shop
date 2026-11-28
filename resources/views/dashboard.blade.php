@@ -3,12 +3,10 @@
 @section('content')
 <div class="container mx-auto px-4 py-8">
     <!-- Dashboard Header -->
-    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
-        <div class="mb-4 md:mb-0">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+        <div>
             <h1 class="text-3xl font-bold text-gray-100">Dashboard</h1>
-            <p class="text-gray-400 mt-1">Welcome back to LuckShop admin panel</p>
         </div>
-        
     </div>
 
     <!-- Stats Cards -->
