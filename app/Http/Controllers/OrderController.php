@@ -870,8 +870,8 @@ class OrderController extends Controller
 
                 foreach ($request->items as $item) {
                     $product = Product::findOrFail($item['product_id']);
-                    if ($product->stock < $item['quantity']) {
-                        throw new \Exception("Insufficient stock for {$product->name}");
+                    if ($product->qty < $item['quantity']) {
+                        throw new \Exception("Insufficient stock for {$product->pro_name}");
                     }
                     $total += $product->discounted_price * $item['quantity'];
                     $itemsToKeep[] = $item['product_id'];
@@ -899,7 +899,7 @@ class OrderController extends Controller
             return redirect()->route('cart.index')->with('success', 'Order updated successfully');
         } catch (\Exception $e) {
             Log::error('Order update failed: ' . $e->getMessage());
-            return redirect()->route('cart.edit', $order)->with('error', $e->getMessage());
+            return redirect()->route('cart.index')->with('error', $e->getMessage());
         }
     }
 

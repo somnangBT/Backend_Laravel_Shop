@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use App\Models\Category;
+use App\Models\Cart;
+use App\Models\OrderItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class ProductController extends Controller
 {
@@ -71,7 +76,7 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code'],
+            'pro_code' => ['required', 'string', 'max:255', Rule::unique('products', 'pro_code')->whereNull('deleted_at')],
             'pro_name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required ដើម្បីការពារ Error null
             'qty' => ['required', 'integer', 'min:0'],
@@ -117,7 +122,7 @@ class ProductController extends Controller
     public function update(Request $request, Product $product)
     {
         $validated = $request->validate([
-            'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code,' . $product->pro_id . ',pro_id'],
+            'pro_code' => ['required', 'string', 'max:255', Rule::unique('products', 'pro_code')->ignore($product->pro_id, 'pro_id')->whereNull('deleted_at')],
             'pro_name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required
             'qty' => ['required', 'integer', 'min:0'],
@@ -153,17 +158,58 @@ class ProductController extends Controller
 
     public function destroy(Product $product)
     {
+        $redirectTo = str_contains((string) url()->previous(), '/dashboard')
+            ? route('dashboard')
+            : route('products.index');
+
         try {
-            if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $product->delete();
-            return redirect()->route('products.index')
-                ->with('success', 'Product deleted successfully.');
-        } catch (\Exception $e) {
-            return redirect()->route('products.index')
-                ->with('error', 'Cannot delete product due to existing relationships or other issues.');
+            $result = $this->deleteProductSafely($product);
+            return redirect()->to($redirectTo)
+                ->with('success', $result['message']);
+        } catch (\Throwable $e) {
+            Log::error('Product delete failed for #' . $product->pro_id . ': ' . $e->getMessage());
+            return redirect()->to($redirectTo)
+                ->with('error', 'Failed to delete product: ' . $e->getMessage());
         }
+    }
+
+    private function deleteProductSafely(Product $product): array
+    {
+        $localImage = null;
+        $archived = false;
+
+        DB::transaction(function () use ($product, &$localImage, &$archived) {
+            Cart::where('product_id', $product->pro_id)->delete();
+
+            $hasOrders = OrderItem::where('product_id', $product->pro_id)->exists();
+            if ($hasOrders) {
+                $suffix = '__del_' . $product->pro_id . '_' . time();
+                $product->pro_code = Str::limit($product->pro_code, 255 - strlen($suffix), '') . $suffix;
+                $product->save();
+                $product->delete();
+                $archived = true;
+            } else {
+                if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
+                    $localImage = $product->image;
+                }
+                $product->forceDelete();
+            }
+        });
+
+        if ($localImage) {
+            try {
+                Storage::disk('public')->delete($localImage);
+            } catch (\Throwable $e) {
+                Log::warning('Could not delete local image ' . $localImage . ': ' . $e->getMessage());
+            }
+        }
+
+        return [
+            'archived' => $archived,
+            'message' => $archived
+                ? 'Product removed from shop catalog (order history preserved).'
+                : 'Product deleted successfully.',
+        ];
     }
 
     // ==================== API Methods ====================
@@ -228,7 +274,7 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         $validator = Validator::make($request->all(), [
-            'pro_code' => ['required', 'string', 'max:255', 'unique:products,pro_code,' . $id . ',pro_id'],
+            'pro_code' => ['required', 'string', 'max:255', Rule::unique('products', 'pro_code')->ignore($id, 'pro_id')->whereNull('deleted_at')],
             'pro_name' => ['required', 'string', 'max:255'],
             'category_id' => ['required', 'exists:categories,cat_id'], // ប្តូរទៅជា required
             'qty' => ['required', 'integer', 'min:0'],
@@ -288,19 +334,18 @@ class ProductController extends Controller
         $product = Product::findOrFail($id);
 
         try {
-            if ($product->image && !filter_var($product->image, FILTER_VALIDATE_URL)) {
-                Storage::disk('public')->delete($product->image);
-            }
-            $product->delete();
+            $result = $this->deleteProductSafely($product);
             return response()->json([
                 'status' => 'success',
-                'message' => 'Product deleted successfully.',
+                'archived' => $result['archived'],
+                'message' => $result['message'],
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('API product delete failed for #' . $product->pro_id . ': ' . $e->getMessage());
             return response()->json([
                 'status' => 'error',
-                'message' => 'Cannot delete product due to existing relationships or other issues.',
-            ], 400);
+                'message' => 'Failed to delete product.',
+            ], 500);
         }
     }
 

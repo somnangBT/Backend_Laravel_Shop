@@ -37,8 +37,8 @@ class DashboardController extends Controller
             return view('dashboard', compact('products', 'totalProducts', 'productsInStock', 'lowStockProducts', 'customers', 'categories'));
         }
 
-        // Single aggregated query instead of 3 separate COUNT(*) round-trips
-        $prodStats = DB::table('products')->selectRaw("
+        // Single aggregated query instead of 3 separate COUNT(*) round-trips (ignores soft-deleted products)
+        $prodStats = Product::selectRaw("
             COUNT(*) as total_count,
             SUM(CASE WHEN qty > 0 THEN 1 ELSE 0 END) as in_stock_count,
             SUM(CASE WHEN qty <= 10 THEN 1 ELSE 0 END) as low_stock_count

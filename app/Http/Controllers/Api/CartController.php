@@ -75,6 +75,12 @@ class CartController extends Controller
 
         // Check stock
         $product = Product::find($productId);
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product is no longer available.',
+            ], 404);
+        }
         if ($product->qty < $quantity) {
             return response()->json([
                 'status' => 'error',
@@ -142,6 +148,12 @@ class CartController extends Controller
 
         // Check stock
         $product = Product::find($cartItem->product_id);
+        if (!$product) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Product is no longer available.',
+            ], 404);
+        }
         if ($product->qty < $request->quantity) {
             return response()->json([
                 'status' => 'error',

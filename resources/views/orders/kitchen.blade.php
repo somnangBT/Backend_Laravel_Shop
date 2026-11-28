@@ -93,7 +93,7 @@
                                                 {{ optional($item->product)->name ?? 'Food Item' }}
                                             </h4>
                                             @if($item->product && $item->product->category)
-                                                <span class="text-[10px] text-gray-400">{{ $item->product->category->name }}</span>
+                                                <span class="text-[10px] text-gray-400">{{ $item->product->category->cat_name }}</span>
                                             @endif
                                         </div>
                                     </div>

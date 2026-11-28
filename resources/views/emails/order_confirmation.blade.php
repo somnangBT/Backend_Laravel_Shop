@@ -11,7 +11,7 @@
     <h2>Order Summary</h2>
     <ul>
         @foreach ($order->items as $item)
-            <li>{{ $item->product->pro_name }} x {{ $item->quantity }} - ${{ number_format($item->price * $item->quantity, 2) }}</li>
+            <li>{{ $item->product?->pro_name ?? ('Product #' . $item->product_id) }} x {{ $item->quantity }} - ${{ number_format($item->price * $item->quantity, 2) }}</li>
         @endforeach
     </ul>
     <p>Subtotal: ${{ number_format($order->subtotal, 2) }}</p>

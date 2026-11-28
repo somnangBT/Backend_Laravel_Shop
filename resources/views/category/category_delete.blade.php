@@ -6,7 +6,7 @@
 
     <div class="bg-white shadow-md rounded p-6 max-w-md">
         <p class="text-gray-700 mb-4">
-            Are you sure you want to delete the category <strong>{{ $category->name }}</strong>?
+            Are you sure you want to delete the category <strong>{{ $category->cat_name }}</strong>?
             This will also delete all associated products.
             @if ($category->deleted_at)
                 This category is already soft-deleted.

@@ -21,7 +21,11 @@
                         <td class="py-3 px-6 text-left">{{ $category->cat_name }}</td>
                         <td class="py-3 px-6 text-left">{{ $category->deleted_at }}</td>
                         <td class="py-3 px-6 text-center">
-                            <a href="{{ route('categories.restore', $category->cat_id) }}" class="text-blue-500 hover:text-blue-700">Restore</a>
+                            <form action="{{ route('categories.restore', $category->cat_id) }}" method="POST" class="inline">
+                                @csrf
+                                @method('PUT')
+                                <button type="submit" class="text-blue-500 hover:text-blue-700 font-medium bg-transparent border-0 cursor-pointer">Restore</button>
+                            </form>
                         </td>
                     </tr>
                 @empty

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Schema;
@@ -31,10 +32,31 @@ class AppServiceProvider extends ServiceProvider
 
         Blade::component('components.card', 'card');
 
+        // Ensure products.deleted_at exists for SoftDeletes even before manual CLI migration
+        if (!$this->app->runningInConsole()) {
+            try {
+                $schemaCacheKey = 'schema_products_has_deleted_at_v1';
+                if (!Cache::get($schemaCacheKey)) {
+                    if (Schema::hasTable('products')) {
+                        if (!Schema::hasColumn('products', 'deleted_at')) {
+                            Schema::table('products', function ($table) {
+                                $table->softDeletes();
+                            });
+                        }
+                        if (Schema::hasColumn('products', 'deleted_at')) {
+                            Cache::forever($schemaCacheKey, true);
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Skip silently if DB is not ready yet
+            }
+        }
+
         // Share admin settings across admin layout and settings views (Cached 5m to cut DB roundtrips)
         View::composer(['layouts.app', 'settings.*'], function ($view) {
             try {
-                $adminSettings = \Illuminate\Support\Facades\Cache::remember('admin_settings', 300, function () {
+                $adminSettings = Cache::remember('admin_settings', 300, function () {
                     return Setting::first();
                 });
             } catch (\Throwable $e) {

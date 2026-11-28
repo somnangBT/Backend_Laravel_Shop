@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
@@ -28,6 +29,7 @@ class CategoryController extends Controller
         ]);
 
         Category::create($validated);
+        Cache::forget('all_categories');
 
         return redirect()->route('categories.index')
             ->with('success', 'Category created successfully.');
@@ -67,6 +69,7 @@ class CategoryController extends Controller
 
         // Update the category
         $category->update($validated);
+        Cache::forget('all_categories');
 
         return redirect()->route('categories.index')
             ->with('success', 'Category updated successfully.');
@@ -76,6 +79,7 @@ class CategoryController extends Controller
     {
         try {
             $category->delete();
+            Cache::forget('all_categories');
             return redirect()->route('categories.index')
                 ->with('success', 'Category deleted successfully.');
         } catch (\Exception $e) {
@@ -108,6 +112,7 @@ class CategoryController extends Controller
     {
         $category = Category::withTrashed()->findOrFail($cat_id);
         $category->restore();
+        Cache::forget('all_categories');
         return redirect()->route('categories.index')
             ->with('success', 'Category restored successfully.');
     }
@@ -154,6 +159,7 @@ class CategoryController extends Controller
         }
 
         $category = Category::create($validator->validated());
+        Cache::forget('all_categories');
 
         return response()->json([
             'status' => 'success',
@@ -193,6 +199,7 @@ class CategoryController extends Controller
 
         $validated = $validator->validated();
         $category->update($validated);
+        Cache::forget('all_categories');
 
         return response()->json([
             'status' => 'success',
@@ -211,6 +218,7 @@ class CategoryController extends Controller
 
         try {
             $category->delete();
+            Cache::forget('all_categories');
             return response()->json([
                 'status' => 'success',
                 'message' => 'Category deleted successfully.',
